@@ -1,0 +1,198 @@
+# SBS R101-IBN, initialised from FastReID's MSMT17 checkpoint, fine-tuned on the whole pool.
+# Self-contained: every setting of the run lives in this file (no _BASE_). Anything not listed
+# falls back to fast-reid/fastreid/config/defaults.py or reidfm/config.py.
+# Strings may use ${VAR:-default} env expansion. CLI "KEY VALUE" pairs override this file.
+
+# --------------------------------------------------------------------------- experiment
+OUTPUT_DIR: sbs_r101ibn_msmt_v1            # relative -> $REIDFM_OUTPUT_ROOT (default outputs/)
+CUDNN_BENCHMARK: true
+
+REIDFM:
+  # Data: the pool decides sources (train), val_sets (in-training eval), test_sets and OOD.
+  POOL: configs/datasets/pool_v1.yaml
+  SOURCES: []                             # non-empty overrides the pool's sources
+  VAL_SETS: []                            # non-empty overrides the pool's val_sets
+  SAMPLER_WEIGHT_MODE: ""                 # sqrt_ids | ids | uniform ("" = pool's)
+  DOMAIN_WEIGHTS: []                      # e.g. ["mot17=0.5", "msmt17=1.5"] (multiplies pool's)
+  SEED: -1                                # >= 0 fixes RNGs (resumed sessions then replay the same sampling order)
+  # Starting point from the model registry (scripts/list_models.py); sets MODEL.WEIGHTS/PRETRAIN.
+  INIT_MODEL: sbs_r101_ibn_msmt
+  # One "epoch" = this many iterations (the pool is far larger than a Kaggle session).
+  ITERS_PER_EPOCH: 2000
+  # Kaggle session guard: checkpoint and exit before the budget runs out (0 disables).
+  TIME_BUDGET_H: 11.0                     # $REIDFM_TIME_BUDGET_H / --time-budget-h override
+  TIME_GUARD_SAFETY: 1.25                 # stop when remaining < slowest epoch * this
+  KEEP_CHECKPOINTS: 2                     # model_XXXX.pth kept; model_best/final always kept
+  # In-training evaluation (benchmark protocol).
+  EVAL_NUM_FRAMES: 8                      # frames sampled per tracklet for video sets
+  VAL_MAX_QUERIES: 0                      # cap queries per val set (0 = all)
+  EVAL_AMP: true
+  EVAL_WORKERS: 4
+
+# --------------------------------------------------------------------------- model
+MODEL:
+  META_ARCHITECTURE: Baseline
+  DEVICE: cuda
+  WEIGHTS: ""                             # filled from REIDFM.INIT_MODEL
+  FREEZE_LAYERS: [backbone]               # frozen for SOLVER.FREEZE_ITERS
+  PIXEL_MEAN: [123.675, 116.28, 103.53]
+  PIXEL_STD: [58.395, 57.12, 57.375]
+  QUEUE_SIZE: 8192
+
+  BACKBONE:
+    NAME: build_resnet_backbone
+    DEPTH: 101x
+    NORM: BN
+    LAST_STRIDE: 1
+    FEAT_DIM: 2048
+    WITH_IBN: true
+    WITH_SE: false
+    WITH_NL: true
+    PRETRAIN: false                       # set by REIDFM.INIT_MODEL
+    PRETRAIN_PATH: ""
+
+  HEADS:
+    NAME: EmbeddingHead
+    NORM: BN
+    WITH_BNNECK: true
+    NECK_FEAT: after                      # before | after the BN neck
+    POOL_LAYER: GeneralizedMeanPoolingP   # GeM with learnable p
+    EMBEDDING_DIM: 0                      # 0 = no extra projection (feature = FEAT_DIM)
+    NUM_CLASSES: 0                        # 0 = inferred from the training identities
+    CLS_LAYER: CircleSoftmax              # Linear | CircleSoftmax | ArcSoftmax | CosSoftmax
+    SCALE: 64
+    MARGIN: 0.35
+
+  LOSSES:
+    NAME: [CrossEntropyLoss, TripletLoss] # + CircleLoss | Cosface | FocalLoss
+    CE:
+      EPSILON: 0.1                        # label smoothing
+      ALPHA: 0.2
+      SCALE: 1.0
+    TRI:
+      MARGIN: 0.0                         # 0 = soft margin
+      HARD_MINING: true
+      NORM_FEAT: false
+      SCALE: 1.0
+    CIRCLE:
+      MARGIN: 0.25
+      GAMMA: 128
+      SCALE: 1.0
+    COSFACE:
+      MARGIN: 0.25
+      GAMMA: 128
+      SCALE: 1.0
+    FL:
+      ALPHA: 0.25
+      GAMMA: 2
+      SCALE: 1.0
+
+# --------------------------------------------------------------------------- input / augmentation
+INPUT:
+  SIZE_TRAIN: [384, 128]
+  SIZE_TEST: [384, 128]
+  FLIP:
+    ENABLED: true
+    PROB: 0.5
+  PADDING:
+    ENABLED: true
+    MODE: constant
+    SIZE: 10
+  REA:                                    # random erasing
+    ENABLED: true
+    PROB: 0.5
+    VALUE: [123.675, 116.28, 103.53]
+  AUTOAUG:
+    ENABLED: true
+    PROB: 0.1
+  CJ:                                     # color jitter
+    ENABLED: false
+    PROB: 0.5
+    BRIGHTNESS: 0.15
+    CONTRAST: 0.15
+    SATURATION: 0.1
+    HUE: 0.1
+  CROP:
+    ENABLED: false
+    SIZE: [224, 224]
+    SCALE: [0.16, 1]
+    RATIO: [0.75, 1.3333333333333333]
+  AUGMIX:
+    ENABLED: false
+    PROB: 0.0
+  RPT:                                    # random patch
+    ENABLED: false
+    PROB: 0.5
+  AFFINE:
+    ENABLED: false
+
+# --------------------------------------------------------------------------- data loading
+DATASETS:
+  NAMES: ()                               # filled from the pool (REIDFM.POOL / SOURCES)
+  TESTS: ()                               # filled from the pool (REIDFM.POOL / VAL_SETS)
+  COMBINEALL: false
+
+DATALOADER:
+  SAMPLER_TRAIN: DomainBalancedIdentitySampler   # or NaiveIdentitySampler (ignores domains)
+  NUM_INSTANCE: 8                         # images per identity in a batch (P x K, K = 8)
+  NUM_WORKERS: 4
+  SET_WEIGHT: []
+
+# --------------------------------------------------------------------------- optimisation
+SOLVER:
+  AMP:
+    ENABLED: true
+  OPT: Adam
+  IMS_PER_BATCH: 128                      # global batch (split across GPUs)
+  BASE_LR: 0.00025
+  BIAS_LR_FACTOR: 1.0
+  HEADS_LR_FACTOR: 1.0
+  MOMENTUM: 0.9                           # SGD only
+  NESTEROV: false
+  WEIGHT_DECAY: 0.0005
+  WEIGHT_DECAY_NORM: 0.0005
+  WEIGHT_DECAY_BIAS: 0.0005
+  CLIP_GRADIENTS:
+    ENABLED: false
+    CLIP_TYPE: norm
+    CLIP_VALUE: 5.0
+    NORM_TYPE: 2.0
+
+  MAX_EPOCH: 30                           # virtual epochs of REIDFM.ITERS_PER_EPOCH
+  SCHED: CosineAnnealingLR                # or MultiStepLR (uses STEPS / GAMMA)
+  DELAY_EPOCHS: 10                        # constant LR before cosine decay
+  ETA_MIN_LR: 7.0e-07
+  STEPS: [40, 90]
+  GAMMA: 0.1
+  WARMUP_METHOD: linear
+  WARMUP_FACTOR: 0.1
+  WARMUP_ITERS: 1000
+  FREEZE_ITERS: 1000                      # MODEL.FREEZE_LAYERS frozen for this many iters
+
+  CHECKPOINT_PERIOD: 1                    # epochs
+
+# --------------------------------------------------------------------------- evaluation
+TEST:
+  EVAL_PERIOD: 5                          # epochs (also runs after the last epoch)
+  IMS_PER_BATCH: 256
+  METRIC: cosine
+  # The flags below belong to FastReID's own evaluator; the in-training reidfm evaluator does
+  # not use them (it follows the benchmark protocol).
+  FLIP:
+    ENABLED: false
+  AQE:
+    ENABLED: false
+    ALPHA: 3.0
+    QE_TIME: 1
+    QE_K: 5
+  RERANK:
+    ENABLED: false
+    K1: 20
+    K2: 6
+    LAMBDA: 0.3
+  PRECISE_BN:
+    ENABLED: false
+    DATASET: Market1501
+    NUM_ITER: 300
+  ROC:
+    ENABLED: false

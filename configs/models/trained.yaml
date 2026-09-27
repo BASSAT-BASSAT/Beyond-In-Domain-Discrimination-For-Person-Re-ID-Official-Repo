@@ -1,0 +1,14 @@
+# Models trained with this repo. scripts/export_weights.py --register appends entries here;
+# fields match reidfm.models.registry.ModelSpec. Example:
+#
+# models:
+#   - key: reidfm_sbs_r50_ibn_v1
+#     label: reidfm SBS-R50-IBN (pool v1, MSMT init)
+#     family: SBS
+#     backbone: R50-IBN
+#     trained_on: reidfm pool v1
+#     init: trained
+#     config_file: configs/models/exported/reidfm_sbs_r50_ibn_v1.yml
+#     weights_file: reidfm_sbs_r50_ibn_v1.pth
+#     sha256: ...
+models: []
