@@ -41,10 +41,12 @@ At this stage, the first part has reached a validated **candidate-metadata miles
 | Cross-source and source-target leakage clearance | **Pending** |
 | Multi-source model fine-tuning | **Not started** |
 | Final unseen-target benchmark | **Not completed** |
-**Interpretation matters:** 11,297 counts distinct identities *within defined source namespaces*.
-It does not prove that 11,297 different real-world people appear across all acquisitions.
-Likewise, 940,809 is the size of the **candidate pool**, not a frozen training set.
-The nine candidate sources may not all be selected for every future experiment.
+
+**How to interpret these numbers:**
+
+- **11,297 identities** means source-scoped identity keys; it does not establish that all persons are unique across datasets.
+- **940,809 images** describes a candidate pool, not an approved final training set.
+- The nine candidate sources may not all be selected for every experiment.
 
 ---
 
@@ -104,6 +106,7 @@ The following numbers describe **locally prepared candidate pools** after their 
 | PRID2011 | 40,033 | 200 | Matched multi-shot; split unassigned |
 | RPIfield | 211,484 | 112 | Known actors; split unassigned |
 | **Total** | **940,809** | **11,297** | **Candidates, not final training data** |
+
 ### CUHK03-NP
 - Uses the **detected** image variant for the current candidate pool.
 - Contains 7,365 candidate training images and 767 training identities.
@@ -111,6 +114,7 @@ The following numbers describe **locally prepared candidate pools** after their 
 - Filename `c1` and `c2` indicate **pair-local views**, not global camera IDs.
 - The corresponding pair must not be guessed from a view label alone.
 - Source image indices are not automatically temporal frame identifiers.
+
 ### IUST-PersonReID
 - Contains 72,393 candidate training images and 1,193 identities.
 - Records 17 physical camera codes within the source dataset.
@@ -118,6 +122,7 @@ The following numbers describe **locally prepared candidate pools** after their 
 - The audit identified substantial temporal near-neighbor redundancy.
 - Future sampling must avoid overrepresenting almost identical moments.
 - The official test/query protocol remains outside the source candidates.
+
 ### LaST
 - Contains 71,248 candidate training images and 5,000 identities.
 - Provides video, frame, clothing, image, and bounding-box identifiers.
@@ -125,6 +130,7 @@ The following numbers describe **locally prepared candidate pools** after their 
 - Video labels do **not** automatically establish physical camera IDs.
 - Clothing changes offer a useful future sampler and ablation dimension.
 - Observed difficult crops are not discarded solely for being unusual.
+
 ### DeepChange
 - Original official training subset: 75,083 images and 450 identities.
 - Local hard cleaning excluded 74 documented conflicting rows.
@@ -133,6 +139,7 @@ The following numbers describe **locally prepared candidate pools** after their 
 - Candidate rows do not directly expose a complete image path.
 - The adapter resolves paths through verified image-hash evidence.
 - The path reconciliation is based on a composite source key.
+
 ### LPW
 - Original official training subset: 418,739 images and 1,975 identities.
 - Two conflicting tracklets account for 292 excluded rows.
@@ -141,6 +148,7 @@ The following numbers describe **locally prepared candidate pools** after their 
 - Labels such as `scen2-10` are scene-scoped identity labels.
 - View codes are **scene-local**, not guaranteed global physical cameras.
 - An image sequence number is not a verified timestamp by default.
+
 ### Occluded-PoseTrack-ReID
 - Contains 17,898 candidate train crops and 1,000 training identities.
 - Training images originate from 474 logical videos.
@@ -148,6 +156,7 @@ The following numbers describe **locally prepared candidate pools** after their 
 - PoseTrack image IDs must not be treated as temporal frame numbers without proof.
 - Numeric person IDs can be reused across source splits for different people.
 - Identity namespaces therefore include the relevant split context.
+
 ### ORBench RGB
 - Current work covers the RGB/VIS modality of ORBench.
 - Original RGB training rows: 27,063.
@@ -156,6 +165,7 @@ The following numbers describe **locally prepared candidate pools** after their 
 - LLCM contributes 9,643 rows; SYSU contributes 17,289 rows.
 - Camera contexts are scoped to the underlying LLCM or SYSU source.
 - The existing cleaning exclusions must not be applied twice.
+
 ### PRID2011
 - Uses 40,033 matched multi-shot images belonging to 200 shared identities.
 - Camera `cam_a` contributes 23,330 images; `cam_b` contributes 16,703.
@@ -164,6 +174,7 @@ The following numbers describe **locally prepared candidate pools** after their 
 - Other camera-only identities were not selected for this initial pool.
 - An official fixed supervised source train/validation partition was not adopted.
 - Unified rows currently retain `source_split = unassigned`.
+
 ### RPIfield
 - The original dataset has 601,581 images and 4,108 source identities.
 - Hard audit flags include 1,262 cross-person pixel-conflict rows.
@@ -199,10 +210,13 @@ The PRW scripts and audit report remain included for scientific traceability.
 | Market1501 | Unseen image-based evaluation | Respect official query/gallery conventions |
 | MARS | Unseen tracklet-based evaluation | Aggregate and compare at the tracklet level |
 | MSMT17 V2 | Potential additional target | Deferred following download/CRC issues |
-**Unseen** is an experimental constraint, not a dataset label alone.
-Target images and target test labels must not be used as supervised source training samples.
-Target-test metrics must not silently become the hyperparameter-selection procedure.
-The project needs a documented source-side validation strategy before final evaluation.
+
+**Evaluation constraints:**
+
+- **Unseen** is an experimental constraint, not merely a dataset label.
+- Target images and test labels must not become supervised source training samples.
+- Target-test metrics must not silently become the hyperparameter-selection procedure.
+- A documented source-side validation strategy is required before final evaluation.
 
 ---
 
@@ -219,6 +233,7 @@ The project needs a documented source-side validation strategy before final eval
 10. **Validate published artifacts:** counts, structure, provenance, and checksums.
 11. **Preserve versions:** a revised cleaning policy should not silently replace v1.
 12. **Keep source and target roles explicit:** no undocumented crossover.
+
 ### Duplicate terminology
 - **Filename collision:** identical basenames are not enough to prove identical content.
 - **Byte duplicate:** complete encoded files have identical bytes.
@@ -253,10 +268,14 @@ Every individual Unified v1 CSV and the merged candidate master use the same **1
 | 17 | `source_row_number` | Original candidate CSV row index |
 | 18 | `source_image_index` | Dataset-specific sequence/image index |
 | 19 | `source_metadata_json` | Additional source metadata retained as JSON |
-The presence of a column does not mean every dataset supplies that information.
-Empty values indicate absent or unverified attributes, not a default value of zero.
-`sample_uid` is derived from dataset name and relative path using SHA-256.
-It is **not** a file-byte or decoded-pixel hash and cannot establish duplicate freedom.
+
+**Schema notes:**
+
+- Not every dataset supplies values for every column.
+- Empty values indicate missing or unverified attributes, not a default value of zero.
+- `sample_uid` is a SHA-256 key derived from the dataset name and relative path.
+- `sample_uid` is **not** a file-byte or decoded-pixel hash and cannot establish duplicate freedom.
+
 ### Identity examples
 ```text
 CUHK03_NP::detected::train::1
@@ -286,9 +305,12 @@ Different datasets use similar field names for **different real-world concepts**
 | ORBench RGB | `source_scoped_camera_code` | LLCM and SYSU contexts differ |
 | PRID2011 | `physical_camera_code` | `cam_a` and `cam_b` |
 | RPIfield | `physical_camera_code` | Twelve source camera codes |
-A future DataLoader or sampler must check `camera_semantics` before using camera-aware strategies.
-Temporal IDs require the same care: filename order and annotation IDs are not always physical timestamps.
-This distinction prevents invalid cross-camera or temporal sampling assumptions.
+
+**Implications for training:**
+
+- A future DataLoader or sampler must check `camera_semantics` before camera-aware sampling.
+- Filename order and annotation IDs are not always physical timestamps.
+- These distinctions prevent invalid cross-camera and temporal sampling assumptions.
 
 ---
 
@@ -359,27 +381,32 @@ Before sharing new CSVs or visual examples, review licensing, personal data, sou
 ---
 
 ## Unified Pipeline Components
+
 ### `scripts/unified/schema.py`
 - Defines the 19-column v1 schema.
 - Checks column names and ordering.
 - Includes a reference-header validation mechanism.
+
 ### `scripts/unified/adapters/`
 - Contains nine source-specific adapters.
 - Reads the corresponding candidate manifest.
 - Normalizes fields without guessing their meaning.
 - Preserves source-specific metadata where supported.
 - Can perform read-only verification independently.
+
 ### `scripts/unified/build_unified.py`
 - Registers the nine supported source adapters.
 - Builds one dataset output at a time.
 - Checks expected row counts and identity keys.
 - Produces deterministic Unified CSV artifacts.
 - Refuses accidental overwrite of an existing output.
+
 ### `scripts/unified/merge_unified.py`
 - Merges the nine individual v1 outputs in a fixed order.
 - Rechecks schema and source provenance.
 - Ensures master candidate UID integrity.
 - Refuses to replace an existing master silently.
+
 ### `scripts/unified/validate_master.py`
 - Compares the master with all nine source files.
 - Validates rows across all 19 fields.
@@ -394,23 +421,28 @@ Use the prepared Lightning Studio workspace with its original authorized dataset
 ```bash
 cd ~/DG_ReID_Audit
 ```
+
 ### Inspect schema
 ```bash
 python scripts/unified/schema.py
 ```
+
 ### Check one adapter without generating files
 ```bash
 python -m scripts.unified.adapters.cuhk03
 ```
 Other registered adapters: `iust`, `last`, `deepchange`, `lpw`, `occluded_posetrack`, `orbench`, `prid2011`, and `rpifield`.
+
 ### Build a per-source manifest (only when absent)
 ```bash
 python -m scripts.unified.build_unified --dataset iust
 ```
+
 ### Merge per-source outputs (only when the target does not already exist)
 ```bash
 python -m scripts.unified.merge_unified
 ```
+
 ### Validate the existing published master
 ```bash
 python -m scripts.unified.validate_master
@@ -441,6 +473,7 @@ MASTER VALIDATION:       PASS
 ```
 The successful comparison establishes internal consistency of the generated metadata at this version.
 It does **not** establish globally unique human identities, legal sharing rights, or freedom from all acquisition overlap.
+
 ### Small Unified previews
 Nine preview CSVs have been prepared with **10 sample rows and 19 columns each**.
 They illustrate the schema without mirroring full, large generated manifests.
@@ -451,12 +484,14 @@ Full generated outputs are intentionally excluded from normal Git tracking.
 ---
 
 ## Data and Git Publication Policy
+
 ### Intended for Git
 - Python auditing and adapter scripts.
 - Project README and pipeline documentation.
 - Reviewed Markdown dataset audit reports.
 - Small, necessary evidence or summary CSVs.
 - Reviewed metadata previews and reproducibility information.
+
 ### Kept outside ordinary Git tracking
 - Original dataset images and archives.
 - Large generated manifests and audit tables.
@@ -466,6 +501,7 @@ Full generated outputs are intentionally excluded from normal Git tracking.
 - Tokens, credentials, and machine-local configuration secrets.
 A private GitHub repository still requires appropriate data-use permissions.
 A `.gitignore` rule prevents new files from being staged normally; it does not certify that a file is safe or legally shareable.
+
 ### Branching
 The research workspace is published on the dedicated branch:
 ```text
@@ -508,26 +544,31 @@ No equivalent blanket clearance is claimed for the other nine candidate pools.
 | P6 | Fair and reproducible multi-source sampler | Pending |
 | P7 | Pretrained, single-source, and multi-source experiments | Pending |
 | P8 | Unseen-domain evaluation and ablation analysis | Pending |
+
 ### P3 — Source protocols
 - Resolve the unassigned supervised role for PRID2011 and RPIfield.
 - Decide whether source validation identities are held out.
 - Store deterministic split files and random seeds.
 - Check that identity namespaces remain valid after splitting.
+
 ### P4 — Leakage clearance
 - Build targeted source-source and source-target comparisons.
 - Record both detected problems and evidence limitations.
 - Keep original dataset artifacts unchanged.
+
 ### P5 and P6 — Training design
 - Freeze approved source domains and identity labels.
 - Map each training identity to a contiguous classifier class ID.
 - Define source balancing, identity sampling, and temporal control.
 - Fix batch size, steps, epoch semantics, and oversampling rules.
+
 ### P7 — Model experiments
 - Establish a pretrained-only feature extractor baseline.
 - Run controlled single-source fine-tuning where appropriate.
 - Run supervised multi-source fine-tuning under matched budgets.
 - Evaluate sampler and source-composition ablations.
 - Track seeds, hyperparameters, checkpoints, and training provenance.
+
 ### P8 — Final evaluation
 - Use the official Market1501 image-based protocol.
 - Use the official MARS tracklet-based protocol.
