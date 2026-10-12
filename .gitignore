@@ -1,0 +1,64 @@
+
+# ============================================
+# DG-ReID Research — Git Ignore Rules
+# ============================================
+
+# Raw datasets and large generated data
+/datasets/
+/manifests/
+/reports/
+/unified/
+
+# Python environments
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Local notebooks (review before publishing)
+*.ipynb
+
+# Model checkpoints and binary artifacts
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.onnx
+*.pkl
+
+# Large data formats
+*.npy
+*.npz
+*.parquet
+*.h5
+*.hdf5
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Temporary files and logs
+*.tmp
+*.log
+.DS_Store
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editor-specific settings
+.vscode/
+.idea/
