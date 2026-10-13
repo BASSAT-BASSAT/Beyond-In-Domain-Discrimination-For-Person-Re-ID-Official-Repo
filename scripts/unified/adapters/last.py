@@ -15,6 +15,8 @@ import hashlib
 from collections import defaultdict
 from pathlib import Path
 
+from reidfm.data.identity import visual_train_pid
+
 from scripts.unified.schema import UNIFIED_COLUMNS
 
 
@@ -85,7 +87,8 @@ def adapt_row(source_row, row_number):
 
     # 5. Build identity namespace
     pid = source_row["pid"]
-    identity_key = f"{IDENTITY_NAMESPACE}::{pid}"
+    visual_pid = visual_train_pid(pid, source_row["clothes_id"])
+    identity_key = f"{IDENTITY_NAMESPACE}::{visual_pid}"
 
     # 6. Preserve dataset-specific metadata
     source_metadata = {

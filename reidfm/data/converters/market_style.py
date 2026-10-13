@@ -66,3 +66,7 @@ def convert_cuhk03np(raw: Path, options: dict) -> list[SourceRow]:
 
 def convert_iust(raw: Path, options: dict) -> list[SourceRow]:
     return convert_market_style(_root_with(raw, (options.get("dirs") or {}).get("train", "bounding_box_train")), options)
+
+
+def convert_dukemtmc(raw: Path, options: dict) -> list[SourceRow]:
+    return convert_market_style(_root_with(raw, "bounding_box_train"), options)

@@ -22,7 +22,7 @@ The `REIDFM:` node:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `POOL` | `configs/datasets/pool_v1.yaml` | fills `DATASETS.NAMES` (sources) and `DATASETS.TESTS` (val sets) |
+| `POOL` | `configs/datasets/pool_v2.yaml` | fills `DATASETS.NAMES` (sources); val from `REIDFM.VAL_MANIFEST` when `val_sets` is empty |
 | `SOURCES`, `VAL_SETS` | `[]` | non-empty lists override the pool's (OOD sets are still rejected as sources) |
 | `SAMPLER_WEIGHT_MODE` | `""` | `sqrt_ids` / `ids` / `uniform`; empty = the pool's |
 | `DOMAIN_WEIGHTS` | `[]` | `"key=multiplier"` entries applied on top of the pool's domain weights |
@@ -43,7 +43,8 @@ under `$REIDFM_OUTPUT_ROOT`.
 
 ## Pools (`datasets/`)
 
-- `pool_v1.yaml`: sources, OOD sets, val/test sets, sampler weights, per-dataset converter
+- `pool_v2.yaml`: paper protocol (11 train domains, 4 test domains, no OOD bucket)
+- `pool_v1.yaml`: deprecated legacy pool
   options (caps, strides, visibility filters).
 - `pool_smoke.yaml`: Market + capped MSMT for local testing.
 

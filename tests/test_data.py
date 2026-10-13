@@ -96,7 +96,23 @@ def test_shipped_pools_are_valid():
     pool = load_pool("configs/datasets/pool_v1.yaml")
     assert not set(pool.sources) & set(pool.ood)
     assert {"prid2011", "iust"} <= set(pool.ood)
+    pool_v2 = load_pool("configs/datasets/pool_v2.yaml")
+    assert "prw" not in pool_v2.sources
+    assert "market1501" not in pool_v2.sources
+    assert {"prid2011", "iust"} <= set(pool_v2.sources)
+    assert pool_v2.ood == []
+    assert set(pool_v2.test_sets) == {"market1501", "msmt17", "mars", "dukemtmc"}
     load_pool("configs/datasets/pool_smoke.yaml")
+
+
+def test_train_split_filter():
+    from reidfm.data.split_filter import train_pid_allowed
+
+    allowed = {"demo": {"1", "2"}}
+    assert train_pid_allowed("demo", "1", allowed)
+    assert not train_pid_allowed("demo", "9", allowed)
+    assert not train_pid_allowed("other", "1", allowed)
+    assert train_pid_allowed("demo", "9", {})
 
 
 def test_check_pool_roles_flags_missing_splits(market_like: Path, tmp_path: Path):

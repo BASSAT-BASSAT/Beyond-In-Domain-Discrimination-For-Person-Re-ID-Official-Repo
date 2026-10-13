@@ -17,9 +17,15 @@ from __future__ import annotations
 from pathlib import Path
 
 from reidfm.data.converters.base import SourceRow, list_images
+from reidfm.data.identity import parse_last_filename, visual_train_pid
 
 
-def _pid(path: Path) -> str:
+def _train_pid(path: Path) -> str:
+    raw_pid, clothes_id = parse_last_filename(path.name)
+    return visual_train_pid(int(raw_pid), clothes_id)
+
+
+def _test_pid(path: Path) -> str:
     return str(int(path.name.split("_")[0]))
 
 
@@ -30,10 +36,10 @@ def convert(raw: Path, options: dict) -> list[SourceRow]:
         if not folder.is_dir():
             raise FileNotFoundError(f"LaST: missing {folder}")
 
-    rows = [SourceRow(src=p, pid=_pid(p), camid="0", split="train") for p in list_images(root / "train", recursive=True)]
+    rows = [SourceRow(src=p, pid=_train_pid(p), camid="0", split="train") for p in list_images(root / "train", recursive=True)]
     query = list_images(root / eval_split / "query")
     gallery = list_images(root / eval_split / "gallery", recursive=True)
     # Test pids share a namespace across query/gallery but not with train.
-    rows += [SourceRow(src=p, pid=f"test{_pid(p)}", camid=f"q{i}", split="query") for i, p in enumerate(query)]
-    rows += [SourceRow(src=p, pid=f"test{_pid(p)}", camid=f"g{i}", split="gallery") for i, p in enumerate(gallery)]
+    rows += [SourceRow(src=p, pid=f"test{_test_pid(p)}", camid=f"q{i}", split="query") for i, p in enumerate(query)]
+    rows += [SourceRow(src=p, pid=f"test{_test_pid(p)}", camid=f"g{i}", split="gallery") for i, p in enumerate(gallery)]
     return rows

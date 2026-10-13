@@ -42,7 +42,7 @@ def main() -> int:
     source.add_argument("--model", help="registry key (scripts/list_models.py)")
     source.add_argument("--checkpoint", help="FastReID checkpoint (.pth)")
     parser.add_argument("--config-file", default=None, help="default: config.yaml next to --checkpoint, or the model's config")
-    parser.add_argument("--pool", default="configs/datasets/pool_v1.yaml")
+    parser.add_argument("--pool", default="configs/datasets/pool_v2.yaml")
     parser.add_argument("--sets", default="all")
     parser.add_argument("--num-frames", type=int, default=8, help="frames per tracklet for video sets")
     parser.add_argument("--max-queries", type=int, default=0)

@@ -24,6 +24,7 @@ from fastreid.utils.events import EventStorage
 
 from reidfm.config import resolve_pool
 from reidfm.data.registry import spec_for_fastreid_name
+from reidfm.data.split_filter import load_train_split, train_pid_allowed
 from reidfm.data.samplers import DomainBalancedIdentitySampler
 from reidfm.engine.hooks import CheckpointPruneHook, MeanMetricCheckpointer, TimeGuardHook
 
@@ -64,12 +65,17 @@ class ReidfmTrainer(DefaultTrainer):
 
     @classmethod
     def build_train_loader(cls, cfg):
+        allowed = load_train_split(cfg.REIDFM.TRAIN_SPLIT)
         items = []
         for name in cfg.DATASETS.NAMES:
+            spec = spec_for_fastreid_name(name)
             data = DATASET_REGISTRY.get(name)(root=_root, combineall=cfg.DATASETS.COMBINEALL)
             if comm.is_main_process():
                 data.show_train()
-            items.extend(data.train)
+            for path, pid, cam in data.train:
+                raw_pid = pid.split("_", 1)[-1] if pid.startswith(f"{spec.key}_") else pid
+                if train_pid_allowed(spec.key, raw_pid, allowed):
+                    items.append((path, pid, cam))
         if not items:
             raise RuntimeError(f"no training images in {cfg.DATASETS.NAMES}")
 

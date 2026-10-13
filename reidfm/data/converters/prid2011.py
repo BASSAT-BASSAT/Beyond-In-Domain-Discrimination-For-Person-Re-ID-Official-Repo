@@ -1,9 +1,8 @@
-"""PRID2011 multi-shot, used only as an out-of-distribution test set.
+"""PRID2011 multi-shot: train candidates + official cam_a query / cam_b gallery test.
 
 Layout: ``prid_2011/multi_shot/cam_a/person_XXXX/*.png`` and ``.../cam_b/person_XXXX/*.png``.
-Persons 1-200 appear in both cameras. Query = cam_a tracklets of those ids, gallery =
-cam_b tracklets. ``gallery_distractors: true`` also adds cam_b-only persons (201-749).
-``num_ids`` limits the shared ids (default all 200; the classic protocol tests on 100).
+Persons 1-200 appear in both cameras. With ``include_train: true``, multi-shot frames from
+both cameras become ``split=train`` with pid ``tr<id>`` so they do not overlap test pids.
 """
 
 from __future__ import annotations
@@ -26,6 +25,28 @@ def _persons(cam_dir: Path) -> dict[int, Path]:
     return found
 
 
+def _train_rows(cam_a: dict[int, Path], cam_b: dict[int, Path], shared: list[int]) -> list[SourceRow]:
+    rows: list[SourceRow] = []
+    for pid in shared:
+        for cam_tag, persons in (("a", cam_a), ("b", cam_b)):
+            folder = persons.get(pid)
+            if folder is None:
+                continue
+            tracklet = f"tr{cam_tag}{pid:04d}"
+            for frame, path in enumerate(list_images(folder)):
+                rows.append(
+                    SourceRow(
+                        src=path,
+                        pid=f"tr{pid}",
+                        camid=cam_tag,
+                        split="train",
+                        tracklet_id=tracklet,
+                        frame=frame,
+                    )
+                )
+    return rows
+
+
 def convert(raw: Path, options: dict) -> list[SourceRow]:
     shots = find_dir(raw, [options.get("variant", "multi_shot")], max_depth=2)
     if shots is None or not (shots / "cam_a").is_dir():
@@ -38,8 +59,19 @@ def convert(raw: Path, options: dict) -> list[SourceRow]:
         gallery_ids += [pid for pid in sorted(cam_b) if pid > SHARED_IDS]
 
     rows: list[SourceRow] = []
+    if options.get("include_train", False):
+        rows.extend(_train_rows(cam_a, cam_b, shared))
     for split, cam, persons, ids in (("query", "a", cam_a, shared), ("gallery", "b", cam_b, gallery_ids)):
         for pid in ids:
             for frame, path in enumerate(list_images(persons[pid])):
-                rows.append(SourceRow(src=path, pid=str(pid), camid=cam, split=split, tracklet_id=f"{cam}{pid:04d}", frame=frame))
+                rows.append(
+                    SourceRow(
+                        src=path,
+                        pid=str(pid),
+                        camid=cam,
+                        split=split,
+                        tracklet_id=f"{cam}{pid:04d}",
+                        frame=frame,
+                    )
+                )
     return rows

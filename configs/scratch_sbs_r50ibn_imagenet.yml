@@ -9,7 +9,7 @@ CUDNN_BENCHMARK: true
 
 REIDFM:
   # Data: the pool decides sources (train), val_sets (in-training eval), test_sets and OOD.
-  POOL: configs/datasets/pool_v1.yaml
+  POOL: configs/datasets/pool_v2.yaml
   SOURCES: []                             # non-empty overrides the pool's sources
   VAL_SETS: []                            # non-empty overrides the pool's val_sets
   SAMPLER_WEIGHT_MODE: ""                 # sqrt_ids | ids | uniform ("" = pool's)

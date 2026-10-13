@@ -36,7 +36,7 @@ from reidfm.utils.provenance import run_provenance, write_json  # noqa: E402
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--pool", default="configs/datasets/pool_v1.yaml")
+    parser.add_argument("--pool", default="configs/datasets/pool_v2.yaml")
     parser.add_argument("--datasets", nargs="*", default=None, help="subset of pool datasets (default: all)")
     parser.add_argument("--raw-root", type=Path, default=None, help="default: $REIDFM_RAW_ROOT or ./raw")
     parser.add_argument("--out-root", type=Path, default=None, help="default: first $REIDFM_DATA_ROOT entry or ./pool")

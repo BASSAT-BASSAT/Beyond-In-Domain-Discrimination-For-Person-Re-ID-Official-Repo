@@ -21,7 +21,7 @@ def add_reidfm_config(cfg) -> None:
 
     cfg.REIDFM = CN()
     # Pool yaml (configs/datasets/*.yaml): sources -> DATASETS.NAMES, val_sets -> DATASETS.TESTS.
-    cfg.REIDFM.POOL = "configs/datasets/pool_v1.yaml"
+    cfg.REIDFM.POOL = "configs/datasets/pool_v2.yaml"
     # Non-empty lists override the pool's sources / val_sets (still validated against its OOD sets).
     cfg.REIDFM.SOURCES = []
     cfg.REIDFM.VAL_SETS = []
@@ -47,6 +47,10 @@ def add_reidfm_config(cfg) -> None:
     cfg.REIDFM.VAL_MAX_QUERIES = 0
     cfg.REIDFM.EVAL_AMP = True
     cfg.REIDFM.EVAL_WORKERS = 4
+    # Identity splits from scripts/build_train_val_split.py (empty = use all train rows).
+    cfg.REIDFM.TRAIN_SPLIT = "splits/pool_v2_train_ids.json"
+    # Folder with manifest.csv for in-training val when pool val_sets is empty.
+    cfg.REIDFM.VAL_MANIFEST = "pool/poolv2val"
 
 
 def get_reidfm_cfg():
@@ -116,7 +120,12 @@ def apply_pool(cfg, pool_path: str | Path | None = None):
     pool = resolve_pool(cfg, pool_path)
     cfg.REIDFM.POOL = str(pool.path)
     cfg.DATASETS.NAMES = tuple(pool.fastreid_names(pool.sources))
-    cfg.DATASETS.TESTS = tuple(pool.fastreid_names(pool.val_sets))
+    if pool.val_sets:
+        cfg.DATASETS.TESTS = tuple(pool.fastreid_names(pool.val_sets))
+    elif cfg.REIDFM.VAL_MANIFEST:
+        cfg.DATASETS.TESTS = ("PoolV2ValM",)
+    else:
+        cfg.DATASETS.TESTS = tuple()
     return pool
 
 

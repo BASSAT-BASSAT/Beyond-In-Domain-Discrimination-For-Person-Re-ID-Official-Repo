@@ -15,7 +15,7 @@ Thin CLIs over `reidfm`. Run from the repo root; `--help` on each for all flags.
 Typical flow:
 
 ```bash
-python scripts/prepare_datasets.py --pool configs/datasets/pool_v1.yaml --materialize copy --skip-missing
+python scripts/prepare_datasets.py --pool configs/datasets/pool_v2.yaml --materialize copy --skip-missing
 python scripts/train.py --config-file configs/finetune_sbs_r50ibn_msmt.yml --num-gpus 2 --resume
 python scripts/evaluate.py --checkpoint outputs/sbs_r50ibn_msmt_v1/model_best.pth --sets all
 python scripts/export_weights.py --run outputs/sbs_r50ibn_msmt_v1 --key reidfm_sbs_r50_ibn_v1 --register

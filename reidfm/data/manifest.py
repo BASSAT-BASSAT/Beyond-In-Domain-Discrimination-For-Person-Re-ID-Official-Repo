@@ -11,6 +11,8 @@ One folder per dataset::
 * ``path`` is relative to the manifest folder, or absolute (``--materialize none``).
 * ``pid`` / ``camid`` are strings, unique within the dataset. Test pids that could collide
   with train pids must already be namespaced by the converter (for example ``test_12``).
+  For clothing-aware sources (LaST), ``pid`` is the **visual** id: same annotator pid with
+  different non-zero ``clothes_id`` becomes ``{raw_pid}c{clothes_id}`` (see ``identity.py``).
 * ``split`` is ``train``, ``query``, or ``gallery``.
 * ``tracklet_id`` groups frames of one track (video datasets); empty for image datasets.
 * ``frame`` is the frame index inside the tracklet, when known.

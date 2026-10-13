@@ -65,8 +65,9 @@ def test_setup_cfg_applies_pool_and_imagenet_init(tmp_path, monkeypatch):
 
     cfg = setup_cfg("configs/scratch_sbs_r50ibn_imagenet.yml", prepare_weights=False)
     assert cfg.MODEL.BACKBONE.PRETRAIN is True and cfg.MODEL.BACKBONE.WITH_IBN is True
-    assert "PRID2011M" not in cfg.DATASETS.NAMES and "IUSTM" not in cfg.DATASETS.NAMES
-    assert "Market1501M" in cfg.DATASETS.NAMES and cfg.DATASETS.TESTS
+    assert "PRID2011M" in cfg.DATASETS.NAMES and "IUSTM" in cfg.DATASETS.NAMES
+    assert "Market1501M" not in cfg.DATASETS.NAMES
+    assert cfg.DATASETS.TESTS == ("PoolV2ValM",)
     assert cfg.OUTPUT_DIR.startswith(str(tmp_path))
     assert cfg.DATALOADER.SAMPLER_TRAIN == "DomainBalancedIdentitySampler"
 

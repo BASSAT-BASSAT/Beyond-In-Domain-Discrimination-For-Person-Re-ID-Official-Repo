@@ -275,6 +275,10 @@ def materialize(
     return [row for row in manifest_rows if (out_dir / row.path) not in crop_paths or (out_dir / row.path).is_file()]
 
 
+def convert_poolv2val_stub(raw: Path, options: dict) -> list[SourceRow]:
+    raise RuntimeError("poolv2val is written by scripts/build_train_val_split.py, not from raw data")
+
+
 def write_dataset(out_dir: Path, rows: list[ManifestRow], meta: dict) -> dict:
     errors = validate_rows(rows)
     if errors:
