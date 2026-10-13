@@ -103,3 +103,15 @@ fast-reid/         gitignored, created by scripts/setup_fastreid.py
 ```bash
 pytest -q            # FastReID-dependent tests are skipped if ./fast-reid is missing
 ```
+## Dataset auditing (DG-ReID)
+
+Ten source datasets were audited on `research/dg-reid-audit` (merged into main). Candidate
+manifests, per-dataset reports, and the unified metadata pipeline live under `manifests/`,
+`reports/`, `scripts/<dataset>/`, and `unified/`.
+
+Full research snapshot, inventory tables, and workflow:
+**[docs/DG-ReID-AUDIT.md](docs/DG-ReID-AUDIT.md)**.
+
+**Note:** the audit excluded **PRW** from the nine-dataset unified pool (Market1501 overlap).
+`configs/datasets/pool_v1.yaml` still includes PRW for foundation training until protocols
+are reconciled.

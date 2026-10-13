@@ -1,7 +1,7 @@
 # FastReID is cloned by scripts/setup_fastreid.py at a pinned commit, never committed.
 fast-reid/
 
-# Data, weights, and run artifacts
+# Data, weights, and run artifacts (reidfm training)
 raw/
 pool/
 datasets/
@@ -15,12 +15,40 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 build/
 dist/
-
-# Env / editors
-.env
 .venv/
+venv/
+env/
+
+# Model checkpoints and large binaries (local only; not the small CSV manifests in repo)
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.onnx
+*.pkl
+*.npz
+*.parquet
+*.h5
+*.hdf5
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Env / editors / OS
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 .ipynb_checkpoints/
 .vscode/
 .idea/
+.DS_Store
+*.tmp
+*.log
