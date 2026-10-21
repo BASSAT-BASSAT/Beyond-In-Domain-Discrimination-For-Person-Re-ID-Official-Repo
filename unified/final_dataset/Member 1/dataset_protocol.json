@@ -1,0 +1,156 @@
+{
+  "caveats": [
+    "Metadata and P3 retrieval checks cannot prove source-to-source/target acquisition independence.",
+    "Actual image bytes, runtime root paths, and pretrained checkpoint provenance were not checked.",
+    "No final nine-source claim if only a subset of sources was supplied."
+  ],
+  "data_images_and_paths_verified": false,
+  "exclusion_policy": {
+    "note": "No new exclusions invented or applied in P5; P4 must be completed separately",
+    "p4_approval_evidence": null,
+    "p4_status": "NOT_CLEARED"
+  },
+  "expected_full_program_sources": 9,
+  "num_selected_sources": 3,
+  "p3_p4_externally_approved": false,
+  "protocol_id": "dg_reid_multi_source_p5_v1",
+  "ready_for_finetuning": false,
+  "schema_version": "v1",
+  "scope": "Only the selected datasets; NOT all nine unless --datasets all was supplied and validated",
+  "selected_datasets": [
+    "CUHK03_NP",
+    "DeepChange",
+    "Occluded-PoseTrack-ReID"
+  ],
+  "source_versions": [
+    {
+      "dataset": "CUHK03_NP",
+      "filename": "cuhk03_np_unified_v1.csv",
+      "role": "frozen_unified",
+      "sha256": "c217943f6e231408b95efc187207be3289b6e4ef56496ce4b73cf276058b1ef1"
+    },
+    {
+      "dataset": "CUHK03_NP",
+      "filename": "cuhk03_np_p3_provisional.csv",
+      "role": "p3_assignments",
+      "sha256": "119ec9e8a759bf6bbed5da49c41160395122dd511259f26fb93d25487f0b820e"
+    },
+    {
+      "dataset": "DeepChange",
+      "filename": "deepchange_unified_v1.csv",
+      "role": "frozen_unified",
+      "sha256": "4df5ecab5acc69909c98616f5d0d9320606976f6c94ffad68fb793e721d17a92"
+    },
+    {
+      "dataset": "DeepChange",
+      "filename": "deepchange_p3_provisional.csv",
+      "role": "p3_assignments",
+      "sha256": "d3da7df7b7edd1283c7983e23420b57b2fcee0133dc0cf2a32cda6a121159458"
+    },
+    {
+      "dataset": "Occluded-PoseTrack-ReID",
+      "filename": "occluded_posetrack_unified_v1.csv",
+      "role": "frozen_unified",
+      "sha256": "fdd4c5f501864cdb985113c78588066fd5f5224e16b5ef77dbfe55b463a096cb"
+    },
+    {
+      "dataset": "Occluded-PoseTrack-ReID",
+      "filename": "occluded_posetrack_p3_provisional.csv",
+      "role": "p3_assignments",
+      "sha256": "18fd2155be41d674e612882fa55dec6f34f4fa4a24335204b1722d13af0f80c4"
+    },
+    {
+      "filename": "cuhk03_internal_c1_to_c2_v1.csv",
+      "role": "p3_retrieval",
+      "sha256": "3e461dd89feb15346337af8958cde749af0e1e6e0d6db132d33390a1fdf11c0d"
+    },
+    {
+      "filename": "cuhk03_internal_c2_to_c1_v1.csv",
+      "role": "p3_retrieval",
+      "sha256": "2f1303c1a7cac2b3db73a1713a5addc1b9728aa8eb4bc22d8e62c27b421389f6"
+    },
+    {
+      "filename": "deepchange_internal_cross_tracklet_v1.csv",
+      "role": "p3_retrieval",
+      "sha256": "c3a207eed6e9f117e61112ab67113aa662c40ac5f1305ea22b0d7a3eeae92b44"
+    },
+    {
+      "filename": "posetrack_internal_same_or_cross_video_v1.csv",
+      "role": "p3_retrieval",
+      "sha256": "74be149208f127a35ce52ba5691252939cb9986f11441f35917971eb15ebe817"
+    }
+  ],
+  "split_policy": {
+    "identity_disjointness_checked": true,
+    "method": "Reused P3 per-image roles verbatim; never inferred from retrieval complement",
+    "no_train_retrieval_overlap_checked": true,
+    "p3_source_role_counts": {
+      "CUHK03_NP": {
+        "train": 5892,
+        "validation": 1473
+      },
+      "DeepChange": {
+        "train": 60916,
+        "validation": 14093
+      },
+      "Occluded-PoseTrack-ReID": {
+        "train": 14266,
+        "validation": 3632
+      }
+    },
+    "seed_reported_by_p3": 42
+  },
+  "status": "PROVISIONAL_P3_P4_PENDING",
+  "target_datasets": [
+    "Market1501",
+    "MARS"
+  ],
+  "training_sources": [
+    "CUHK03_NP",
+    "DeepChange",
+    "Occluded-PoseTrack-ReID"
+  ],
+  "unified_master_sha256": null,
+  "validation_protocols": {
+    "cuhk03_internal_c1_to_c2_v1": {
+      "dataset": "CUHK03_NP",
+      "gallery_identities": 153,
+      "gallery_images": 754,
+      "query_identities": 153,
+      "query_images": 719,
+      "rule": "Positives: same identity in opposite pair-local view; all opposite-view other identities are negatives. Report both directions separately or their mean.",
+      "source": "provided_p3_retrieval_protocol_report",
+      "status": "internally_verified_not_official_test"
+    },
+    "cuhk03_internal_c2_to_c1_v1": {
+      "dataset": "CUHK03_NP",
+      "gallery_identities": 153,
+      "gallery_images": 719,
+      "query_identities": 153,
+      "query_images": 754,
+      "rule": "Positives: same identity in opposite pair-local view; all opposite-view other identities are negatives. Report both directions separately or their mean.",
+      "source": "provided_p3_retrieval_protocol_report",
+      "status": "internally_verified_not_official_test"
+    },
+    "deepchange_internal_cross_tracklet_v1": {
+      "dataset": "DeepChange",
+      "gallery_identities": 90,
+      "gallery_images": 13580,
+      "query_identities": 90,
+      "query_images": 513,
+      "rule": "Exclude same-identity AND same-tracklet gallery images per query (junk). Positives: same identity, different tracklet. Other identities are negatives.",
+      "source": "provided_p3_retrieval_protocol_report",
+      "status": "internally_verified_not_official_test"
+    },
+    "posetrack_internal_same_or_cross_video_v1": {
+      "dataset": "Occluded-PoseTrack-ReID",
+      "gallery_identities": 200,
+      "gallery_images": 3432,
+      "query_identities": 200,
+      "query_images": 200,
+      "rule": "Positives: same identity, other sample. Same-video positives allowed. video_id is not physical camera. Report cross-video metrics separately only for eligible queries.",
+      "source": "provided_p3_retrieval_protocol_report",
+      "status": "internally_verified_not_official_test"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": "v1",
+  "sources": [
+    {
+      "dataset": "CUHK03_NP",
+      "dataset_root_id": "CUHK03_NP",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_CUHK03_NP",
+      "train_rows": 5892,
+      "validation_unique_rows": 1473
+    },
+    {
+      "dataset": "DeepChange",
+      "dataset_root_id": "DeepChange",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_DEEPCHANGE",
+      "train_rows": 60916,
+      "validation_unique_rows": 14093
+    },
+    {
+      "dataset": "Occluded-PoseTrack-ReID",
+      "dataset_root_id": "Occluded-PoseTrack-ReID",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_OCCLUDED_POSETRACK_REID",
+      "train_rows": 14266,
+      "validation_unique_rows": 3632
+    }
+  ]
+}
