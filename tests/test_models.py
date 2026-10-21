@@ -9,7 +9,15 @@ from reidfm.models import available_models, get_model_spec
 
 def test_registry_contents():
     keys = set(available_models())
-    assert {"sbs_r50_ibn_msmt", "sbs_r101_ibn_msmt", "sbs_r50_ibn_imagenet", "osnet_ain_msdc", "sbs_s50_mot17"} <= keys
+    assert {
+        "sbs_r50_ibn_msmt",
+        "sbs_r101_ibn_msmt",
+        "sbs_r50_ibn_imagenet",
+        "bot_r50_ibn_imagenet",
+        "agw_r50_ibn_imagenet",
+        "osnet_ain_msdc",
+        "sbs_s50_mot17",
+    } <= keys
     spec = get_model_spec("sbs_r50_ibn_msmt")
     assert spec.config_file.endswith("MSMT17/sbs_R50-ibn.yml")
     assert spec.weights_url.endswith("msmt_sbs_R50-ibn.pth")

@@ -1,10 +1,10 @@
-# SBS R101-IBN, initialised from FastReID's MSMT17 checkpoint, fine-tuned on the whole pool.
+# Fair appendix: AGW R50-IBN from ImageNet only (no ReID pre-training), trained on the whole pool.
 # Self-contained: every setting of the run lives in this file (no _BASE_). Anything not listed
 # falls back to fast-reid/fastreid/config/defaults.py or reidfm/config.py.
 # Strings may use ${VAR:-default} env expansion. CLI "KEY VALUE" pairs override this file.
 
 # --------------------------------------------------------------------------- experiment
-OUTPUT_DIR: sbs_r101ibn_msmt_v1            # relative -> $REIDFM_OUTPUT_ROOT (default outputs/)
+OUTPUT_DIR: agw_r50ibn_imagenet_v1            # relative -> $REIDFM_OUTPUT_ROOT (default outputs/)
 CUDNN_BENCHMARK: true
 
 REIDFM:
@@ -16,7 +16,7 @@ REIDFM:
   DOMAIN_WEIGHTS: []                      # e.g. ["mot17=0.5", "msmt17=1.5"] (multiplies pool's)
   SEED: -1                                # >= 0 fixes RNGs (resumed sessions then replay the same sampling order)
   # Starting point from the model registry (scripts/list_models.py); sets MODEL.WEIGHTS/PRETRAIN.
-  INIT_MODEL: sbs_r101_ibn_msmt
+  INIT_MODEL: agw_r50_ibn_imagenet
   # One "epoch" = this many iterations (the pool is far larger than a Kaggle session).
   ITERS_PER_EPOCH: 2000
   # Kaggle session guard: checkpoint and exit before the budget runs out (0 disables).
@@ -41,7 +41,7 @@ MODEL:
 
   BACKBONE:
     NAME: build_resnet_backbone
-    DEPTH: 101x
+    DEPTH: 50x
     NORM: BN
     LAST_STRIDE: 1
     FEAT_DIM: 2048
@@ -56,10 +56,10 @@ MODEL:
     NORM: BN
     WITH_BNNECK: true
     NECK_FEAT: after                      # before | after the BN neck
-    POOL_LAYER: GeneralizedMeanPoolingP   # GeM with learnable p
+    POOL_LAYER: GeneralizedMeanPooling   # GeM with learnable p
     EMBEDDING_DIM: 0                      # 0 = no extra projection (feature = FEAT_DIM)
     NUM_CLASSES: 0                        # 0 = inferred from the training identities
-    CLS_LAYER: CircleSoftmax              # Linear | CircleSoftmax | ArcSoftmax | CosSoftmax
+    CLS_LAYER: Linear              # Linear | CircleSoftmax | ArcSoftmax | CosSoftmax
     SCALE: 64
     MARGIN: 0.35
 
@@ -71,7 +71,7 @@ MODEL:
       SCALE: 1.0
     TRI:
       MARGIN: 0.0                         # 0 = soft margin
-      HARD_MINING: true
+      HARD_MINING: false
       NORM_FEAT: false
       SCALE: 1.0
     CIRCLE:
@@ -89,8 +89,8 @@ MODEL:
 
 # --------------------------------------------------------------------------- input / augmentation
 INPUT:
-  SIZE_TRAIN: [384, 128]
-  SIZE_TEST: [384, 128]
+  SIZE_TRAIN: [256, 128]
+  SIZE_TEST: [256, 128]
   FLIP:
     ENABLED: true
     PROB: 0.5
@@ -103,7 +103,7 @@ INPUT:
     PROB: 0.5
     VALUE: [123.675, 116.28, 103.53]
   AUTOAUG:
-    ENABLED: true
+    ENABLED: false
     PROB: 0.1
   CJ:                                     # color jitter
     ENABLED: false
@@ -144,7 +144,7 @@ SOLVER:
     ENABLED: true
   OPT: Adam
   IMS_PER_BATCH: 128                      # global batch (split across GPUs)
-  BASE_LR: 0.00025
+  BASE_LR: 0.00035
   BIAS_LR_FACTOR: 1.0
   HEADS_LR_FACTOR: 1.0
   MOMENTUM: 0.9                           # SGD only
@@ -158,9 +158,9 @@ SOLVER:
     CLIP_VALUE: 5.0
     NORM_TYPE: 2.0
 
-  MAX_EPOCH: 30                           # virtual epochs of REIDFM.ITERS_PER_EPOCH
+  MAX_EPOCH: 60                           # virtual epochs of REIDFM.ITERS_PER_EPOCH
   SCHED: CosineAnnealingLR                # or MultiStepLR (uses STEPS / GAMMA)
-  DELAY_EPOCHS: 10                        # constant LR before cosine decay
+  DELAY_EPOCHS: 20                        # constant LR before cosine decay
   ETA_MIN_LR: 7.0e-07
   STEPS: [40, 90]
   GAMMA: 0.1

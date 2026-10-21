@@ -1,14 +1,11 @@
 """Train on the multi-source pool with FastReID's trainer (single GPU or DDP).
 
 Examples:
-    python scripts/train.py --config-file configs/finetune_sbs_r50ibn_msmt.yml --num-gpus 2
-    python scripts/train.py --config-file configs/finetune_sbs_r50ibn_msmt.yml --num-gpus 2 --resume
-    # Kaggle, next session: copy the previous session's run dir in, then resume
-    python scripts/train.py --config-file configs/finetune_sbs_r50ibn_msmt.yml --num-gpus 2 \
+    python scripts/train.py --config-file configs/kaggle/primary_sbs_r50_poolv2.yml --num-gpus 2
+    python scripts/train.py --config-file configs/kaggle/primary_sbs_r50_poolv2.yml --num-gpus 2 --resume
+    python scripts/train.py --config-file configs/kaggle/primary_sbs_r50_poolv2.yml --num-gpus 2 \
         --resume --restore-from /kaggle/input/reidfm-run-s1
-    # override the starting point / pool / anything in the cfg
-    python scripts/train.py --config-file configs/finetune_sbs_r50ibn_msmt.yml --model sbs_r50_ibn_market \
-        SOLVER.BASE_LR 0.0002
+    python scripts/train.py --config-file configs/kaggle/loss_study_B3.yml SOLVER.BASE_LR 0.0002
 """
 
 from __future__ import annotations
@@ -29,7 +26,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", default=None, help="registry key of the init model (overrides REIDFM.INIT_MODEL)")
     parser.add_argument("--pool", default=None, help="pool yaml (overrides REIDFM.POOL)")
     parser.add_argument("--output-dir", default=None, help="absolute, or relative to $REIDFM_OUTPUT_ROOT")
-    parser.add_argument("--resume", action="store_true", help="continue from OUTPUT_DIR/last_checkpoint")
+    parser.add_argument("--resume", action="store_true", help="continue from OUTPUT_DIR/last_checkpoint (also implied when AUTO_RESUME sees a prior run)")
+    parser.add_argument("--fresh", action="store_true", help="ignore existing checkpoints in OUTPUT_DIR and start from INIT_MODEL weights")
     parser.add_argument("--restore-from", default=None, help="copy a previous run dir (read-only input) into OUTPUT_DIR first")
     parser.add_argument("--time-budget-h", type=float, default=None, help="stop cleanly after this many hours (0 = off)")
     parser.add_argument("--eval-only", action="store_true", help="evaluate MODEL.WEIGHTS / last checkpoint on the val sets")
@@ -96,14 +94,21 @@ def launch_main() -> int:
     ensure_fastreid()
     from fastreid.engine import launch
 
-    # Resolve the output dir, restore a previous session, and download/convert init weights
-    # once here, so DDP workers don't race on the same files.
-    cfg = build_cfg(args, prepare_weights=not args.resume)
+    cfg = build_cfg(args, prepare_weights=False)
     if args.restore_from:
         from reidfm.engine.resume import restore_run_dir
 
         restore_run_dir(args.restore_from, cfg.OUTPUT_DIR)
-        args.resume = True
+
+    from reidfm.engine.checkpointing import resolve_resume
+
+    args.resume = resolve_resume(
+        args.fresh,
+        bool(cfg.REIDFM.AUTO_RESUME),
+        cfg.OUTPUT_DIR,
+        args.resume,
+    )
+    cfg = build_cfg(args, prepare_weights=not args.resume)
     from reidfm.utils.paths import repo_path
 
     args.output_dir = cfg.OUTPUT_DIR

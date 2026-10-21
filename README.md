@@ -70,22 +70,20 @@ See `.env.example`.
 |---|---|
 | Train sources | Nine unified-audit sources (incl. IUST, PRID2011) + MOT17 + MOT20 (**no PRW**, no Market/MSMT/MARS/Duke) |
 | Validation during training | Cluster holdout (`splits/pool_v2_*`, manifest `pool/poolv2val`) |
-| Test (reported) | Market1501, MSMT17, MARS, DukeMTMC (held-out domains) |
-| Deprecated | `pool_v1.yaml` (legacy recipe with PRW + Market/MSMT in train) |
+| Test (reported) | Market1501, MSMT17, MARS, DukeMTMC, Occluded-Duke (held-out) |
 
 See **[docs/PAPER_PROTOCOL.md](docs/PAPER_PROTOCOL.md)**. Caps and strides keep video/MOT sources from dominating (see `configs/datasets/pool_v2.yaml`);
 the sampler weights domains by `sqrt(#ids)`. DukeMTMC is excluded (withdrawn). Licenses and
 restricted datasets are listed in [`THIRD_PARTY_PROVENANCE.md`](THIRD_PARTY_PROVENANCE.md).
 
-## Experiments (phase 1)
+## Experiments
 
-| ID | Model | Config |
-|---|---|---|
-| E0 | zero-shot `sbs_r50_ibn_msmt`, `osnet_ain_msdc` | `scripts/evaluate.py --model ...` |
-| E1 | ImageNet R50-IBN on pool v2 (control) | `configs/scratch_sbs_r50ibn_imagenet.yml` |
-| E2 | MSMT SBS-R50-IBN fine-tuned on pool v2 (main) | `configs/finetune_sbs_r50ibn_msmt.yml` |
-| E3 | MSMT SBS-R101-IBN fine-tuned on pool v2 | `configs/finetune_sbs_r101ibn_msmt.yml` |
-| Ablation | FastReID `NaiveIdentitySampler` instead of domain balancing | add `DATALOADER.SAMPLER_TRAIN NaiveIdentitySampler` |
+| Goal | Config / command |
+|------|------------------|
+| **Train (Kaggle)** | `configs/kaggle/primary_sbs_r50_poolv2.yml` via `notebooks/01_kaggle_train.ipynb` |
+| Loss ablations | `configs/kaggle/loss_study_B0.yml` … `B7.yml` |
+| Zero-shot zoo eval | `scripts/evaluate.py --model sbs_r50_ibn_msmt` (etc.) |
+| Local train | `python scripts/train.py --config-file configs/kaggle/<preset>.yml` |
 
 ## Layout
 
@@ -113,7 +111,7 @@ Full research snapshot, inventory tables, and workflow:
 **[docs/DG-ReID-AUDIT.md](docs/DG-ReID-AUDIT.md)**.
 
 **Note:** the audit excluded **PRW** from the nine-dataset unified pool (Market1501 overlap).
-`configs/datasets/pool_v2.yaml` follows that policy; legacy `pool_v1.yaml` remains for comparison only.
+Training uses `configs/datasets/pool_v2.yaml` only.
 
 **Before training:** audits, CSV formats, MOT17/20, and `clothes_id` rules are summarized in
 **[docs/TRAINING_READINESS.md](docs/TRAINING_READINESS.md)**.

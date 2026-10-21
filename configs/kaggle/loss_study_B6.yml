@@ -1,0 +1,18 @@
+_BASE_CONFIG: ../scratch_sbs_r50ibn_imagenet.yml
+
+OUTPUT_DIR: kaggle_loss_B6
+
+REIDFM:
+  STUDY_MODE: true
+  LOSS_STUDY_CONDITION: B6
+  SEED: 0
+  TRAIN_SPLIT: splits/pool_v2_train_ids.json
+
+MODEL:
+  META_ARCHITECTURE: LossStudyBaseline
+  HEADS:
+    NAME: AngularEmbeddingHead
+    CLS_LAYER: Linear
+  LOSSES:
+    NAME:
+    - SphereFace2Loss

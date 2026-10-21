@@ -62,4 +62,10 @@ def ensure_fastreid() -> None:
     register_manifest_datasets()
     register_samplers()
     register_backbones()
+    _register_reidfm_modeling()
     _READY = True
+
+
+def _register_reidfm_modeling() -> None:
+    from reidfm.modeling.heads.angular_head import AngularEmbeddingHead  # noqa: F401
+    from reidfm.modeling.meta_arch.loss_study_baseline import LossStudyBaseline  # noqa: F401

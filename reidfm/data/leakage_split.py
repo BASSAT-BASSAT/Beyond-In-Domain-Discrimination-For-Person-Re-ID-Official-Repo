@@ -12,6 +12,14 @@ from typing import Iterable, Sequence
 from reidfm.data.audit import dhash
 from reidfm.data.manifest import Manifest, ManifestRow, load_manifest, write_manifest
 from reidfm.data.pool import PoolConfig
+from reidfm.data.registry import get_dataset_spec
+from reidfm.data.split_policies import (
+    get_split_policy,
+    identity_disjoint_train_val,
+    policy_summary,
+    train_pids_from_manifest,
+)
+from reidfm.data.teammate_splits import load_teammate_split, validate_teammate_split
 
 
 @dataclass(frozen=True)
@@ -123,6 +131,87 @@ def assign_components(
     return SplitArtifacts(train_ids=train_ids, val_ids=val_ids, clusters=clusters)
 
 
+def _split_dhash_domain(
+    key: str,
+    manifest: Manifest,
+    *,
+    train_fraction: float,
+    max_samples_per_id: int,
+    dhash_threshold: int,
+    rng: random.Random,
+) -> tuple[list[str], list[str], list[list[str]], dict]:
+    sampled = sample_train_rows(manifest, max_samples_per_id, rng)
+    by_pid: dict[str, ManifestRow] = {}
+    for row in sampled:
+        by_pid.setdefault(row.pid, row)
+    refs: list[IdentityRef] = []
+    paths: list[Path] = []
+    for pid, row in sorted(by_pid.items()):
+        refs.append(IdentityRef(key, pid))
+        paths.append(manifest.resolve(row))
+    edges = build_dhash_edges(paths, dhash_threshold)
+    components = _union_find_components(len(refs), edges)
+    partial = assign_components(refs, components, train_fraction, rng)
+    return (
+        partial.train_ids.get(key, []),
+        partial.val_ids.get(key, []),
+        partial.clusters,
+        {"embedder": "dhash", "identities": len(refs), "components": len(components)},
+    )
+
+
+def _split_teammate_or_dhash_domain(
+    key: str,
+    manifest: Manifest,
+    *,
+    train_fraction: float,
+    max_samples_per_id: int,
+    dhash_threshold: int,
+    seed: int,
+    rng: random.Random,
+) -> tuple[list[str], list[str], list[list[str]], dict]:
+    blob = load_teammate_split(key)
+    if blob is not None:
+        train, val = validate_teammate_split(key, manifest, blob)
+        clusters = [[f"{key}:{p}"] for p in train + val]
+        return train, val, clusters, {
+            "strategy": "teammate_file",
+            "policy_label": blob.get("label", f"{key}_teammate"),
+            "source": blob.get("source", "teammate"),
+            "path": str(blob.get("_path", "")),
+            "n_train_ids": len(train),
+            "n_val_ids": len(val),
+        }
+    tr, va, cl, meta = _split_dhash_domain(
+        key,
+        manifest,
+        train_fraction=train_fraction,
+        max_samples_per_id=max_samples_per_id,
+        dhash_threshold=dhash_threshold,
+        rng=rng,
+    )
+    meta["fallback"] = "dhash_cluster_pending_teammate_file"
+    meta["expected_file"] = f"splits/datasets/{key}.json"
+    return tr, va, cl, meta
+
+
+def _split_identity_domain(
+    key: str,
+    manifest: Manifest,
+    *,
+    train_fraction: float,
+    seed: int,
+    policy_kind: str,
+) -> tuple[list[str], list[str], list[list[str]], dict]:
+    pids = train_pids_from_manifest(manifest)
+    if not pids:
+        return [], [], [], {"error": "no train identities"}
+    train, val, meta = identity_disjoint_train_val(pids, train_fraction=train_fraction, seed=seed + hash(key) % 997)
+    clusters = [[f"{key}:{p}"] for p in train + val]
+    meta["policy_kind"] = policy_kind
+    return train, val, clusters, meta
+
+
 def split_pool(
     pool: PoolConfig,
     *,
@@ -132,46 +221,63 @@ def split_pool(
     dhash_threshold: int = 6,
     roots: Sequence[Path] | None = None,
 ) -> SplitArtifacts:
-    """Per-(dataset,pid) components merged by cheap dHash similarity within each dataset."""
+    """Per-source train/val identity lists (policy-aware; never mixes query/gallery test rows)."""
     rng = random.Random(seed)
     manifests = load_train_manifests(pool, roots)
-    refs: list[IdentityRef] = []
-    paths: list[Path] = []
-    index_by_ref: dict[str, int] = {}
+    train_ids: dict[str, list[str]] = defaultdict(list)
+    val_ids: dict[str, list[str]] = defaultdict(list)
+    clusters: list[list[str]] = []
+    per_dataset: dict[str, dict] = {}
+    total_ids = 0
 
     for key, manifest in manifests.items():
-        sampled = sample_train_rows(manifest, max_samples_per_id, rng)
-        by_pid: dict[str, ManifestRow] = {}
-        for row in sampled:
-            by_pid.setdefault(row.pid, row)
-        for pid, row in sorted(by_pid.items()):
-            ref = IdentityRef(key, pid)
-            index_by_ref[ref.key()] = len(refs)
-            refs.append(ref)
-            paths.append(manifest.resolve(row))
+        spec = get_dataset_spec(key)
+        policy = get_split_policy(spec.split_policy or key)
+        if policy.kind in ("identity_disjoint", "orbench_official_train"):
+            tr, va, cl, meta = _split_identity_domain(
+                key, manifest, train_fraction=train_fraction, seed=seed, policy_kind=policy.kind
+            )
+            meta["policy_label"] = policy.label
+        elif policy.kind == "teammate_or_dhash":
+            tr, va, cl, meta = _split_teammate_or_dhash_domain(
+                key,
+                manifest,
+                train_fraction=train_fraction,
+                max_samples_per_id=max_samples_per_id,
+                dhash_threshold=dhash_threshold,
+                seed=seed,
+                rng=rng,
+            )
+            meta.setdefault("policy_label", policy.label)
+        else:
+            tr, va, cl, meta = _split_dhash_domain(
+                key,
+                manifest,
+                train_fraction=train_fraction,
+                max_samples_per_id=max_samples_per_id,
+                dhash_threshold=dhash_threshold,
+                rng=rng,
+            )
+            meta["policy_label"] = policy.label
+        train_ids[key] = sorted(set(tr))
+        val_ids[key] = sorted(set(va))
+        clusters.extend(cl)
+        per_dataset[key] = meta
+        total_ids += len(train_ids[key]) + len(val_ids[key])
 
-    # edges only within same dataset (cross-dataset merge optional later via embeddings)
-    edges: list[tuple[int, int]] = []
-    by_ds: dict[str, list[int]] = defaultdict(list)
-    for i, ref in enumerate(refs):
-        by_ds[ref.dataset].append(i)
-    for indices in by_ds.values():
-        sub_paths = [paths[i] for i in indices]
-        sub_edges = build_dhash_edges(sub_paths, dhash_threshold)
-        for a, b in sub_edges:
-            edges.append((indices[a], indices[b]))
-
-    components = _union_find_components(len(refs), edges)
-    artifacts = assign_components(refs, components, train_fraction, rng)
-    artifacts.meta = {
-        "pool": pool.name,
-        "seed": seed,
-        "train_fraction": train_fraction,
-        "identities": len(refs),
-        "components": len(components),
-        "embedder": "dhash",
-    }
-    return artifacts
+    return SplitArtifacts(
+        train_ids=dict(train_ids),
+        val_ids=dict(val_ids),
+        clusters=clusters,
+        meta={
+            "pool": pool.name,
+            "seed": seed,
+            "train_fraction": train_fraction,
+            "identities": total_ids,
+            "per_dataset": per_dataset,
+            "policies": policy_summary(pool.sources),
+        },
+    )
 
 
 def save_split_artifacts(artifacts: SplitArtifacts, out_dir: Path) -> None:
@@ -180,6 +286,9 @@ def save_split_artifacts(artifacts: SplitArtifacts, out_dir: Path) -> None:
     (out_dir / "pool_v2_val_ids.json").write_text(json.dumps(artifacts.val_ids, indent=2), encoding="utf-8")
     (out_dir / "leakage_clusters.json").write_text(json.dumps(artifacts.clusters, indent=2), encoding="utf-8")
     (out_dir / "split_meta.json").write_text(json.dumps(artifacts.meta, indent=2), encoding="utf-8")
+    (out_dir / "split_policies.json").write_text(
+        json.dumps(artifacts.meta.get("policies", {}), indent=2), encoding="utf-8"
+    )
 
 
 def build_val_manifest(

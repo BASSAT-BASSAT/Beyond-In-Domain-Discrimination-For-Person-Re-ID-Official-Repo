@@ -1,0 +1,7 @@
+# Secondary transfer baseline (MSMT zoo — not for held-out primary claims).
+_BASE_CONFIG: ../finetune_sbs_r50ibn_msmt.yml
+
+OUTPUT_DIR: kaggle_finetune_sbs_r50_msmt
+
+REIDFM:
+  SEED: 0

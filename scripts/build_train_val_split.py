@@ -16,6 +16,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from reidfm.data.leakage_split import build_val_manifest, save_split_artifacts, split_pool  # noqa: E402
 from reidfm.data.pool import load_pool  # noqa: E402
+from reidfm.data.teammate_splits import list_pending_teammate_splits  # noqa: E402
 from reidfm.utils.paths import repo_path  # noqa: E402
 
 
@@ -60,6 +61,9 @@ def main() -> int:
         f"- Train fraction: {args.train_fraction}\n",
     ]
     (report_dir / "split_audit.md").write_text("".join(lines), encoding="utf-8")
+    pending = list_pending_teammate_splits(pool.sources)
+    if pending:
+        print("teammate split files still missing (using dhash fallback for now):", ", ".join(pending))
     print(f"wrote split artifacts under {out_dir}")
     return 0
 

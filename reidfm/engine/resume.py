@@ -38,7 +38,7 @@ def restore_run_dir(src: str | Path, dst: str | Path, overwrite: bool = False) -
         raise FileNotFoundError(f"no last_checkpoint under {src}")
     last = (run / "last_checkpoint").read_text().strip()
     dst.mkdir(parents=True, exist_ok=True)
-    wanted = {last, "model_best.pth", "last_checkpoint"}
+    wanted = {last, "model_best.pth", "model_last.pth", "model_final.pth", "last_checkpoint"}
     for path in run.iterdir():
         if path.is_file() and (path.name in wanted or path.suffix in SMALL_SUFFIXES or path.name.startswith("events.out")):
             shutil.copy2(path, dst / path.name)

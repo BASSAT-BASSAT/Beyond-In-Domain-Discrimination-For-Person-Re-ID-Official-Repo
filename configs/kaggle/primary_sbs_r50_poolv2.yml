@@ -1,0 +1,10 @@
+# Primary paper run (loss-study R0): SBS R50-IBN, ImageNet init, pool v2, Circle + triplet.
+_BASE_CONFIG: ../scratch_sbs_r50ibn_imagenet.yml
+
+OUTPUT_DIR: kaggle_primary_sbs_r50_poolv2
+
+REIDFM:
+  STUDY_MODE: true
+  LOSS_STUDY_CONDITION: R0
+  SEED: 0
+  TRAIN_SPLIT: splits/pool_v2_train_ids.json

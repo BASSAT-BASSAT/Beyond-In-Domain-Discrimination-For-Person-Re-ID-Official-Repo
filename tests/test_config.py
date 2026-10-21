@@ -13,6 +13,11 @@ pytestmark = pytest.mark.fastreid
 TRAIN_CONFIGS = sorted(
     f"configs/{p.relative_to(repo_path('configs')).as_posix()}"
     for p in [*repo_path("configs").glob("*.yml"), *repo_path("configs/models").glob("*.yml")]
+    if "kaggle" not in p.parts
+)
+
+KAGGLE_CONFIGS = sorted(
+    f"configs/kaggle/{p.name}" for p in repo_path("configs/kaggle").glob("*.yml")
 )
 
 
@@ -54,3 +59,15 @@ def test_ood_set_cannot_become_a_source():
 def test_env_time_budget_overrides_yaml(monkeypatch):
     monkeypatch.setenv("REIDFM_TIME_BUDGET_H", "3.5")
     assert _cfg([]).REIDFM.TIME_BUDGET_H == 3.5
+
+
+@pytest.mark.parametrize("config", KAGGLE_CONFIGS)
+def test_kaggle_presets_merge_base(config: str, monkeypatch):
+    from reidfm.config import load_cfg
+
+    monkeypatch.delenv("REIDFM_TIME_BUDGET_H", raising=False)
+    cfg = load_cfg(config)
+    assert cfg.REIDFM.INIT_MODEL
+    assert cfg.OUTPUT_DIR
+    if config.endswith("primary_sbs_r50_poolv2.yml"):
+        assert cfg.MODEL.HEADS.CLS_LAYER == "CircleSoftmax"

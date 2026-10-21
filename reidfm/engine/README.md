@@ -11,14 +11,17 @@ freeze iterations, AMP, DDP, checkpoint format). Changes:
 - **`test`:** the benchmark-protocol evaluator on `DATASETS.TESTS` (the pool's `val_sets`),
   main process only. Logs per-set R1 / mAP / mINP and `metric = (R1 + mAP) / 2`, plus `mean`.
 - **Hooks (`hooks.py`):**
-  - `MeanMetricCheckpointer`: `model_best.pth` tracks `mean/metric`; the best value is stored in
-    every checkpoint so it survives resume.
+  - `MeanMetricCheckpointer`: each epoch saves `model_XXXX.pth` and **`model_last.pth`** (latest full
+    state for crash recovery). **`model_best.pth`** tracks `mean/metric`; **`model_final.pth`** is
+    written on the last epoch. Optimizer/scheduler state and `best_metric` are in every file.
   - `TimeGuardHook`: after each epoch, if another epoch (1.25x the slowest so far) would not fit
     in `REIDFM.TIME_BUDGET_H` since `$REIDFM_SESSION_START`, save and stop. Rank 0 decides and
     broadcasts, so DDP ranks exit together.
   - `CheckpointPruneHook`: keep only the newest `REIDFM.KEEP_CHECKPOINTS` `model_XXXX.pth` (Kaggle's
     `/kaggle/working` is 20 GB); never deletes the file named in `last_checkpoint`.
-- **Resume:** epoch-granular via FastReID's `last_checkpoint` (`--resume`).
+- **Resume:** epoch-granular via FastReID's `last_checkpoint`. With `REIDFM.AUTO_RESUME` (default
+  `true`), re-running `train.py` on the same `OUTPUT_DIR` continues automatically; use `--fresh` to
+  ignore prior checkpoints. Uncaught errors trigger an emergency `model_last` save when possible.
 
 ## Kaggle sessions (`resume.py`)
 

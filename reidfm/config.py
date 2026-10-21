@@ -40,8 +40,10 @@ def add_reidfm_config(cfg) -> None:
     cfg.REIDFM.TIME_GUARD_SAFETY = 1.25
     # >0: fixed "virtual" epoch length in iterations (pool epochs are huge; Kaggle needs granularity).
     cfg.REIDFM.ITERS_PER_EPOCH = 0
-    # Keep this many model_XXXX.pth epoch checkpoints (model_best/model_final are always kept).
+    # Keep this many model_XXXX.pth epoch checkpoints (model_best/model_final/model_last are never pruned).
     cfg.REIDFM.KEEP_CHECKPOINTS = 2
+    # If OUTPUT_DIR already has last_checkpoint, train.py resumes without requiring --resume.
+    cfg.REIDFM.AUTO_RESUME = True
     # Evaluation: frames per tracklet for video sets, query cap for in-training val (0 = all).
     cfg.REIDFM.EVAL_NUM_FRAMES = 8
     cfg.REIDFM.VAL_MAX_QUERIES = 0
@@ -51,6 +53,16 @@ def add_reidfm_config(cfg) -> None:
     cfg.REIDFM.TRAIN_SPLIT = "splits/pool_v2_train_ids.json"
     # Folder with manifest.csv for in-training val when pool val_sets is empty.
     cfg.REIDFM.VAL_MANIFEST = "pool/poolv2val"
+    # Loss study / fair-baseline protocol (see docs/PAPER_PROTOCOL.md).
+    cfg.REIDFM.STUDY_MODE = False
+    cfg.REIDFM.STRICT_SPLIT = False
+    cfg.REIDFM.LOSS_STUDY_CONDITION = ""
+    cfg.MODEL.HEADS.NUM_SUBCENTERS = 1
+    cfg.MODEL.LOSSES.SPHERE = CN()
+    cfg.MODEL.LOSSES.SPHERE.SCALE = 64.0
+    cfg.MODEL.LOSSES.SPHERE.MARGIN = 0.2
+    cfg.MODEL.LOSSES.SPHERE.LAMBDA = 1.0
+    cfg.MODEL.LOSSES.SPHERE.GAMMA = 1.0
 
 
 def get_reidfm_cfg():
@@ -73,8 +85,27 @@ def _expand_cfg(node) -> None:
 
 
 def load_cfg(config_file: str | Path, opts: list[str] | None = None):
+    import yaml
+
+    path = repo_path(config_file)
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    base = data.pop("_BASE_CONFIG", None)
     cfg = get_reidfm_cfg()
-    cfg.merge_from_file(str(repo_path(config_file)))
+    if base:
+        base_path = Path(base)
+        if not base_path.is_absolute():
+            candidate = (path.parent / base).resolve()
+            base_path = candidate if candidate.is_file() else repo_path(base)
+        cfg.merge_from_file(str(base_path))
+    if data:
+        overlay = path.parent / f".{path.stem}.overlay.yml"
+        overlay.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+        try:
+            cfg.merge_from_file(str(overlay))
+        finally:
+            overlay.unlink(missing_ok=True)
+    elif not base:
+        cfg.merge_from_file(str(path))
     if os.environ.get("REIDFM_TIME_BUDGET_H"):
         cfg.REIDFM.TIME_BUDGET_H = float(os.environ["REIDFM_TIME_BUDGET_H"])
     if opts:
@@ -169,6 +200,7 @@ def setup_cfg(
     output_dir: str | None = None,
     time_budget_h: float | None = None,
     prepare_weights: bool = True,
+    validate_study: bool = True,
 ):
     cfg = load_cfg(config_file, opts)
     apply_pool(cfg, pool)
@@ -176,5 +208,12 @@ def setup_cfg(
     if time_budget_h is not None:
         cfg.REIDFM.TIME_BUDGET_H = float(time_budget_h)
     resolve_output_dir(cfg, output_dir)
+    if validate_study and (cfg.REIDFM.STUDY_MODE or cfg.REIDFM.STRICT_SPLIT):
+        from reidfm.experiments.protocol import validate_study_protocol
+
+        validate_study_protocol(
+            cfg,
+            require_imagenet_init=bool(getattr(cfg.REIDFM, "LOSS_STUDY_CONDITION", "")),
+        )
     cfg.freeze()
     return cfg

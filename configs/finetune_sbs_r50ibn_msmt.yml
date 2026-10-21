@@ -22,7 +22,8 @@ REIDFM:
   # Kaggle session guard: checkpoint and exit before the budget runs out (0 disables).
   TIME_BUDGET_H: 11.0                     # $REIDFM_TIME_BUDGET_H / --time-budget-h override
   TIME_GUARD_SAFETY: 1.25                 # stop when remaining < slowest epoch * this
-  KEEP_CHECKPOINTS: 2                     # model_XXXX.pth kept; model_best/final always kept
+  KEEP_CHECKPOINTS: 2                     # model_XXXX.pth kept; model_best/final/last never pruned
+  AUTO_RESUME: true                       # re-run train.py on same OUTPUT_DIR to continue (or --fresh)
   # In-training evaluation (benchmark protocol).
   EVAL_NUM_FRAMES: 8                      # frames sampled per tracklet for video sets
   VAL_MAX_QUERIES: 0                      # cap queries per val set (0 = all)

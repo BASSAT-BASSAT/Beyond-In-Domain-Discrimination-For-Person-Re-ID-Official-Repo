@@ -1,0 +1,71 @@
+# Nine-condition angular-loss study (primary table). ImageNet SBS R50-IBN, pool v2.
+base_config: configs/scratch_sbs_r50ibn_imagenet.yml
+init_model: sbs_r50_ibn_imagenet
+seeds: [0, 1, 2]
+screening: [R0, B0, B1, B2, B3, B4]
+
+conditions:
+  R0:
+    opts:
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: CircleSoftmax
+      MODEL.LOSSES.NAME: [CrossEntropyLoss, TripletLoss]
+
+  B0:
+    opts:
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: Linear
+      MODEL.LOSSES.NAME: [CrossEntropyLoss]
+
+  B1:
+    opts:
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: Linear
+      MODEL.LOSSES.NAME: [CrossEntropyLoss, TripletLoss]
+
+  B2:
+    opts:
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: ArcSoftmax
+      MODEL.LOSSES.NAME: [CrossEntropyLoss]
+
+  B3:
+    opts:
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: ArcSoftmax
+      MODEL.LOSSES.NAME: [CrossEntropyLoss, TripletLoss]
+
+  B4:
+    opts:
+      MODEL.META_ARCHITECTURE: LossStudyBaseline
+      MODEL.HEADS.NAME: AngularEmbeddingHead
+      MODEL.HEADS.CLS_LAYER: SubCenterArcSoftmax
+      MODEL.HEADS.NUM_SUBCENTERS: 3
+      MODEL.LOSSES.NAME: [CrossEntropyLoss]
+
+  B5:
+    opts:
+      MODEL.META_ARCHITECTURE: LossStudyBaseline
+      MODEL.HEADS.NAME: AngularEmbeddingHead
+      MODEL.HEADS.CLS_LAYER: SubCenterArcSoftmax
+      MODEL.HEADS.NUM_SUBCENTERS: 3
+      MODEL.LOSSES.NAME: [CrossEntropyLoss, TripletLoss]
+
+  B6:
+    opts:
+      MODEL.META_ARCHITECTURE: LossStudyBaseline
+      MODEL.HEADS.NAME: AngularEmbeddingHead
+      MODEL.HEADS.CLS_LAYER: Linear
+      MODEL.LOSSES.NAME: [SphereFace2Loss]
+
+  B7:
+    opts:
+      MODEL.META_ARCHITECTURE: LossStudyBaseline
+      MODEL.HEADS.NAME: AngularEmbeddingHead
+      MODEL.HEADS.CLS_LAYER: Linear
+      MODEL.LOSSES.NAME: [SphereFace2Loss, TripletLoss]

@@ -59,8 +59,10 @@ class MeanMetricCheckpointer(PeriodicCheckpointer):
             self.checkpointer.save("model_best", **state)
         if periodic:
             self.checkpointer.save(f"model_{epoch:04d}", **state)
+            self.checkpointer.save("model_last", **state)
         if final:
             self.checkpointer.save("model_final", **state)
+            self.checkpointer.save("model_last", **state)
         self.trainer.saved_epoch = epoch if (periodic or final) else getattr(self.trainer, "saved_epoch", -1)
 
     def after_train(self):
@@ -118,6 +120,7 @@ class TimeGuardHook(HookBase):
             if ckpt_hook is not None:
                 state = ckpt_hook.state(epoch)
             self.checkpointer.save(f"model_{epoch:04d}", **state)
+            self.checkpointer.save("model_last", **state)
         logger.warning(
             "Time guard: stopping after epoch %d (%.2f h used of %.2f h). Resume with --resume.",
             epoch, (time.time() - session_start()) / 3600.0, self.budget_s / 3600.0,

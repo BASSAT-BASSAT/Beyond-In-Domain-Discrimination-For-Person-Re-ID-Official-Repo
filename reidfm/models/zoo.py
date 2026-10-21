@@ -157,6 +157,24 @@ def _register_imagenet_baselines() -> None:
                 notes="No ReID weights: FastReID downloads the ImageNet IBN backbone (MODEL.BACKBONE.PRETRAIN=True)",
             )
         )
+    for fam_key, fam_label, yaml_prefix in (
+        ("bot", "BoT", "bagtricks"),
+        ("agw", "AGW", "AGW"),
+    ):
+        register_model(
+            ModelSpec(
+                key=f"{fam_key}_r50_ibn_imagenet",
+                label=f"FastReID {fam_label}-R50-IBN (ImageNet init)",
+                family=fam_label,
+                backbone="R50-IBN",
+                trained_on="ImageNet",
+                init="imagenet",
+                config_file=f"fast-reid/configs/MSMT17/{yaml_prefix}_R50-ibn.yml",
+                input_size=(256, 128),
+                source="imagenet",
+                notes="Fair appendix baseline: train on pool v2 from ImageNet IBN only",
+            )
+        )
 
 
 def _register_trained() -> None:

@@ -70,3 +70,10 @@ def convert_iust(raw: Path, options: dict) -> list[SourceRow]:
 
 def convert_dukemtmc(raw: Path, options: dict) -> list[SourceRow]:
     return convert_market_style(_root_with(raw, "bounding_box_train"), options)
+
+
+def convert_occluded_duke(raw: Path, options: dict) -> list[SourceRow]:
+    """Occluded-DukeMTMC query/gallery only (no train split in pool v2)."""
+    root = _root_with(raw, "query")
+    dirs = {"query": "query", "gallery": "bounding_box_test"}
+    return convert_market_style(root, {**options, "dirs": dirs})

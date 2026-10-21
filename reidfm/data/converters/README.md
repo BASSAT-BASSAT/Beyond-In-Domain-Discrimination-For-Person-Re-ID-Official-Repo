@@ -15,7 +15,8 @@ options, writes images (copies, links, or crops) and the dataset's `manifest.csv
 | `mars.py` | MARS | same protocol as the benchmark |
 | `lpw.py` | LPW | scen2/3 train, scen1 test (view2 query) |
 | `prid2011.py` | PRID2011 | OOD only: cam_a query vs cam_b gallery |
-| `pattern_dirs.py` | DeepChange, RPIfield, ORBench-RGB | folders + regex, configure in the pool yaml |
+| `pattern_dirs.py` | DeepChange, RPIfield | folders + regex, configure in the pool yaml |
+| `orbench_rgb.py` | ORBench RGB | official `train_annos.json` + `test_gallery_and_queries.json` |
 
 Rules every converter follows:
 

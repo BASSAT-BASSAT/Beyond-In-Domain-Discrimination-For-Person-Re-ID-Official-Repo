@@ -28,6 +28,8 @@ from reidfm.data.split_filter import load_train_split, train_pid_allowed
 from reidfm.data.samplers import DomainBalancedIdentitySampler
 from reidfm.engine.hooks import CheckpointPruneHook, MeanMetricCheckpointer, TimeGuardHook
 
+_EMERGENCY_CKPT = "model_last"
+
 logger = logging.getLogger(__name__)
 
 
@@ -146,6 +148,17 @@ class ReidfmTrainer(DefaultTrainer):
                     hook.best_metric = best
             logger.info("Resumed at epoch %d (best mean metric so far %.2f)", self.start_epoch, best)
 
+    def _emergency_checkpoint(self) -> None:
+        if not comm.is_main_process():
+            return
+        ckpt_hook = next((h for h in getattr(self, "_hooks", []) if isinstance(h, MeanMetricCheckpointer)), None)
+        epoch = int(getattr(self, "epoch", max(self.start_epoch - 1, 0)))
+        state = ckpt_hook.state(epoch) if ckpt_hook is not None else {"epoch": epoch, "metric": -1.0, "best_metric": -1.0}
+        if ckpt_hook is not None:
+            state["best_metric"] = ckpt_hook.best_metric
+        self.checkpointer.save(_EMERGENCY_CKPT, **state)
+        logger.warning("Saved emergency checkpoint %s (epoch %d)", _EMERGENCY_CKPT, epoch)
+
     # ------------------------------------------------------------------ loop
 
     def train(self):
@@ -168,6 +181,10 @@ class ReidfmTrainer(DefaultTrainer):
                         break
             except Exception:
                 logger.exception("Exception during training:")
+                try:
+                    self._emergency_checkpoint()
+                except Exception:
+                    logger.exception("Could not write emergency checkpoint:")
                 raise
             finally:
                 self.after_train()

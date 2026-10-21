@@ -1,54 +1,47 @@
 # Configs
 
-## Training (FastReID yaml)
+## Kaggle / ablations (pick one file)
 
-Each training config is **self-contained** (no `_BASE_` chain): model, losses, augmentation,
-sampler, solver/schedule, evaluation, checkpointing and the `REIDFM` run settings are all written
-out and commented in the one file. Edit the file, or override from the CLI.
+All paper and ablation runs for teammates: **[`kaggle/README.md`](kaggle/README.md)** — set `CONFIG_YAML` in `notebooks/01_kaggle_train.ipynb`.
 
-| File | Use |
-|---|---|
-| `finetune_sbs_r50ibn_msmt.yml` | **E2 (main):** SBS-R50-IBN from the FastReID MSMT17 checkpoint, LR 2.5e-4, 30 epochs (~1 Kaggle session). |
-| `finetune_sbs_r101ibn_msmt.yml` | E3: SBS-R101-IBN from MSMT17, ~2 sessions. |
-| `scratch_sbs_r50ibn_imagenet.yml` | E1 (control): ImageNet R50-IBN, LR 3.5e-4, 60 epochs. |
-| `smoke_sbs_r50ibn.yml` | tiny local smoke test on `pool_smoke` (batch 32, 3 x 10 iters). |
-| `models/osnet_ain_x1_0.yml` | OSNet-AIN (MSDC checkpoint), 256x128, same recipe. |
+## Base recipes (used via `_BASE_CONFIG` overlays)
 
-To start a new experiment, copy the closest file and change what you need. Keys not listed fall
-back to `fast-reid/fastreid/config/defaults.py` (mostly transformer/distillation options that
-the ResNet/OSNet SBS recipe does not use).
+These full yamls are the source of truth for hyperparameters. Do not delete; kaggle presets layer on top.
 
-The `REIDFM:` node:
+| File | Role |
+|------|------|
+| `scratch_sbs_r50ibn_imagenet.yml` | ImageNet SBS R50-IBN, pool v2 (primary paper backbone) |
+| `scratch_bot_r50ibn_imagenet.yml` / `scratch_agw_r50ibn_imagenet.yml` | Fair appendix CNN baselines |
+| `finetune_sbs_r50ibn_msmt.yml` | Optional MSMT zoo init (secondary / not held-out primary) |
+| `smoke_sbs_r50ibn.yml` | Local CI smoke on `pool_smoke` |
 
-| Key | Default | Meaning |
-|---|---|---|
-| `POOL` | `configs/datasets/pool_v2.yaml` | fills `DATASETS.NAMES` (sources); val from `REIDFM.VAL_MANIFEST` when `val_sets` is empty |
-| `SOURCES`, `VAL_SETS` | `[]` | non-empty lists override the pool's (OOD sets are still rejected as sources) |
-| `SAMPLER_WEIGHT_MODE` | `""` | `sqrt_ids` / `ids` / `uniform`; empty = the pool's |
-| `DOMAIN_WEIGHTS` | `[]` | `"key=multiplier"` entries applied on top of the pool's domain weights |
-| `SEED` | `-1` | fixed RNG seed when >= 0 (resumed sessions then replay the same sampling order) |
-| `INIT_MODEL` | `""` | model registry key; sets `MODEL.WEIGHTS` (converted) or ImageNet `PRETRAIN` |
-| `ITERS_PER_EPOCH` | `0` | virtual epoch length (0 = one pass over the pool) |
-| `TIME_BUDGET_H` | `11.0` | stop cleanly before this many hours (0 = off) |
-| `TIME_GUARD_SAFETY` | `1.25` | stop when remaining time < slowest epoch x this |
-| `KEEP_CHECKPOINTS` | `2` | epoch checkpoints kept on disk |
-| `EVAL_NUM_FRAMES` | `8` | frames per tracklet at validation |
-| `VAL_MAX_QUERIES` | `0` | subsample validation queries (0 = all) |
-| `EVAL_AMP`, `EVAL_WORKERS` | `True`, `4` | validation feature extraction |
-
-Precedence, lowest to highest: yaml, `$REIDFM_TIME_BUDGET_H` (budget only), trailing CLI pairs
-(`python scripts/train.py --config-file ... SOLVER.BASE_LR 0.0002`), then the dedicated flags
-(`--pool`, `--model`, `--output-dir`, `--time-budget-h`). Relative `OUTPUT_DIR`s are placed
-under `$REIDFM_OUTPUT_ROOT`.
+CLI example: `python scripts/train.py --config-file configs/kaggle/primary_sbs_r50_poolv2.yml`
 
 ## Pools (`datasets/`)
 
-- `pool_v2.yaml`: paper protocol (11 train domains, 4 test domains, no OOD bucket)
-- `pool_v1.yaml`: deprecated legacy pool
-  options (caps, strides, visibility filters).
-- `pool_smoke.yaml`: Market + capped MSMT for local testing.
+| File | Use |
+|------|-----|
+| `pool_v2.yaml` | **Paper training pool** (11 sources; held-out test battery in yaml) |
+| `pool_smoke.yaml` | Tiny Market + MSMT for local smoke tests |
+
+## Experiments manifest (`experiments/`)
+
+- `loss_study_9.yaml` — nine-condition matrix for `scripts/run_loss_study.py` (local/CI)
+- `paper_fair_baselines.yaml` — BoT/AGW runner manifest
 
 ## Models (`models/`)
 
-- `trained.yaml`: registry entries for models trained here (`export_weights.py --register`).
-- `exported/<key>.yml`: standalone FastReID configs written by `export_weights.py`.
+- `osnet_ain_x1_0.yml` — OSNet-AIN MSDC eval recipe
+- `trained.yaml` — registry entries from `export_weights.py --register`
+
+## `REIDFM` node (common keys)
+
+| Key | Meaning |
+|-----|---------|
+| `POOL` | `configs/datasets/pool_v2.yaml` → `DATASETS.NAMES` |
+| `INIT_MODEL` | Registry key → weights or ImageNet pretrain |
+| `TRAIN_SPLIT` | `splits/pool_v2_train_ids.json` after `build_train_val_split.py` |
+| `STUDY_MODE` | Fail-fast splits + protocol checks |
+| `TIME_BUDGET_H` | Kaggle session guard (also `$REIDFM_TIME_BUDGET_H`) |
+
+Relative `OUTPUT_DIR` → `$REIDFM_OUTPUT_ROOT`.

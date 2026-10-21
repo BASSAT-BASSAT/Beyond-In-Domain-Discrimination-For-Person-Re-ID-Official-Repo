@@ -93,15 +93,12 @@ def test_pool_validation_rejects_ood_sources():
 
 
 def test_shipped_pools_are_valid():
-    pool = load_pool("configs/datasets/pool_v1.yaml")
-    assert not set(pool.sources) & set(pool.ood)
-    assert {"prid2011", "iust"} <= set(pool.ood)
     pool_v2 = load_pool("configs/datasets/pool_v2.yaml")
     assert "prw" not in pool_v2.sources
     assert "market1501" not in pool_v2.sources
     assert {"prid2011", "iust"} <= set(pool_v2.sources)
     assert pool_v2.ood == []
-    assert set(pool_v2.test_sets) == {"market1501", "msmt17", "mars", "dukemtmc"}
+    assert set(pool_v2.test_sets) == {"market1501", "msmt17", "mars", "dukemtmc", "occludedduke"}
     load_pool("configs/datasets/pool_smoke.yaml")
 
 

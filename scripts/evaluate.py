@@ -83,12 +83,16 @@ def main() -> int:
     from reidfm.evaluation.evaluator import mean_row
 
     ood = [k for k in results if k in pool.ood]
-    in_domain = {k: v for k, v in results.items() if k != "mean" and k not in pool.ood}
-    summary = {"mean_all": results.get("mean", {}), "mean_in_domain": mean_row(in_domain),
-               "mean_ood": mean_row({k: results[k] for k in ood})}
-    title = f"{name} ({'OOD: ' + ', '.join(ood) if ood else 'no OOD sets'})"
+    held_out = {k: v for k, v in results.items() if k != "mean" and k not in pool.ood}
+    summary = {
+        "mean_all": results.get("mean", {}),
+        "mean_held_out": mean_row(held_out),
+        "mean_in_domain": mean_row(held_out),
+        "mean_ood": mean_row({k: results[k] for k in ood}),
+    }
+    title = f"{name} ({'OOD: ' + ', '.join(ood) if ood else 'held-out test battery'})"
     markdown = results_markdown(results, title)
-    for label, row in (("in-domain mean", summary["mean_in_domain"]), ("OOD mean", summary["mean_ood"])):
+    for label, row in (("held-out mean", summary["mean_held_out"]), ("OOD mean", summary["mean_ood"])):
         if row:
             markdown += f"\n{label}: R1 {row['Rank-1']:.2f} / mAP {row['mAP']:.2f} / mINP {row['mINP']:.2f}"
     markdown += "\n"

@@ -8,8 +8,6 @@ from types import SimpleNamespace
 
 import pytest
 
-pytestmark = pytest.mark.fastreid
-
 
 def _touch(path: Path, text: str = "x") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -17,6 +15,23 @@ def _touch(path: Path, text: str = "x") -> Path:
     return path
 
 
+def test_resolve_resume():
+    from reidfm.engine.checkpointing import resolve_resume
+
+    assert not resolve_resume(fresh=True, auto_resume=True, output_dir="/x", resume_flag=False)
+    assert resolve_resume(fresh=False, auto_resume=False, output_dir="/x", resume_flag=True)
+    assert not resolve_resume(fresh=False, auto_resume=True, output_dir="/x", resume_flag=False)
+
+
+def test_resolve_resume_when_last_checkpoint_exists(tmp_path: Path):
+    from reidfm.engine.checkpointing import resolve_resume
+
+    _touch(tmp_path / "last_checkpoint", "model_0000.pth")
+    assert resolve_resume(fresh=False, auto_resume=True, output_dir=tmp_path, resume_flag=False)
+    assert not resolve_resume(fresh=True, auto_resume=True, output_dir=tmp_path, resume_flag=False)
+
+
+@pytest.mark.fastreid
 def test_prune_keeps_newest_and_protected(tmp_path: Path):
     from reidfm.engine.hooks import CheckpointPruneHook
 
@@ -29,6 +44,7 @@ def test_prune_keeps_newest_and_protected(tmp_path: Path):
     assert left == ["model_0001.pth", "model_0003.pth", "model_0004.pth", "model_best.pth"]
 
 
+@pytest.mark.fastreid
 def test_restore_run_dir_copies_what_resume_needs(tmp_path: Path):
     from reidfm.engine.resume import restore_run_dir
 
@@ -45,6 +61,7 @@ def test_restore_run_dir_copies_what_resume_needs(tmp_path: Path):
     assert "model_0001.pth" not in names
 
 
+@pytest.mark.fastreid
 def test_time_guard_stops_when_next_epoch_does_not_fit(monkeypatch):
     from reidfm.engine import hooks
 

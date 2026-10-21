@@ -1,8 +1,7 @@
 """Convert raw datasets into the unified pool and audit it.
 
 Examples:
-    # everything in pool v1 that exists under $REIDFM_RAW_ROOT, copied into ./pool
-    python scripts/prepare_datasets.py --pool configs/datasets/pool_v1.yaml
+    python scripts/prepare_datasets.py --pool configs/datasets/pool_v2.yaml
 
     # only two datasets, hard-linked instead of copied
     python scripts/prepare_datasets.py --datasets market1501 mars --materialize link
