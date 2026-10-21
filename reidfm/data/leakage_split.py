@@ -13,12 +13,14 @@ from reidfm.data.audit import dhash
 from reidfm.data.manifest import Manifest, ManifestRow, load_manifest, write_manifest
 from reidfm.data.pool import PoolConfig
 from reidfm.data.registry import get_dataset_spec
+from reidfm.data.official_native_splits import manifest_ratio_report
 from reidfm.data.split_policies import (
     get_split_policy,
     identity_disjoint_train_val,
     policy_summary,
     train_pids_from_manifest,
 )
+from reidfm.data.structured_split import DEFAULT_TRAIN_FRACTION, split_structured_or_dhash
 from reidfm.data.teammate_splits import load_teammate_split, validate_teammate_split
 
 
@@ -182,17 +184,57 @@ def _split_teammate_or_dhash_domain(
             "n_train_ids": len(train),
             "n_val_ids": len(val),
         }
-    tr, va, cl, meta = _split_dhash_domain(
+    tr, va, cl, meta = split_structured_or_dhash(
         key,
         manifest,
         train_fraction=train_fraction,
         max_samples_per_id=max_samples_per_id,
         dhash_threshold=dhash_threshold,
+        seed=seed,
         rng=rng,
+        dhash_fn=_split_dhash_domain,
     )
-    meta["fallback"] = "dhash_cluster_pending_teammate_file"
+    meta["fallback"] = meta.get("fallback") or "structured_or_dhash_pending_teammate_file"
     meta["expected_file"] = f"splits/datasets/{key}.json"
     return tr, va, cl, meta
+
+
+def _split_official_native_domain(key: str, manifest: Manifest, *, in_training_val: bool) -> tuple[
+    list[str], list[str], list[list[str]], dict
+]:
+    train = train_pids_from_manifest(manifest)
+    clusters = [[f"{key}:{p}"] for p in train]
+    report = manifest_ratio_report(key, manifest, in_training_val=in_training_val)
+    meta = {
+        "strategy": "official_native",
+        "n_train_ids": len(train),
+        "n_val_ids": 0,
+        "in_training_eval": in_training_val,
+        "ratios": report.to_dict(),
+    }
+    return train, [], clusters, meta
+
+
+def _split_structured_or_dhash_domain(
+    key: str,
+    manifest: Manifest,
+    *,
+    train_fraction: float,
+    max_samples_per_id: int,
+    dhash_threshold: int,
+    seed: int,
+    rng: random.Random,
+) -> tuple[list[str], list[str], list[list[str]], dict]:
+    return split_structured_or_dhash(
+        key,
+        manifest,
+        train_fraction=train_fraction,
+        max_samples_per_id=max_samples_per_id,
+        dhash_threshold=dhash_threshold,
+        seed=seed + hash(key) % 997,
+        rng=rng,
+        dhash_fn=_split_dhash_domain,
+    )
 
 
 def _split_identity_domain(
@@ -216,7 +258,7 @@ def split_pool(
     pool: PoolConfig,
     *,
     seed: int = 42,
-    train_fraction: float = 0.85,
+    train_fraction: float = DEFAULT_TRAIN_FRACTION,
     max_samples_per_id: int = 4,
     dhash_threshold: int = 6,
     roots: Sequence[Path] | None = None,
@@ -232,8 +274,23 @@ def split_pool(
 
     for key, manifest in manifests.items():
         spec = get_dataset_spec(key)
-        policy = get_split_policy(spec.split_policy or key)
-        if policy.kind in ("identity_disjoint", "orbench_official_train"):
+        policy = get_split_policy(spec.split_policy or key, pool.split_mode)
+        if policy.kind == "official_native":
+            in_val = key in (pool.val_sets or [])
+            tr, va, cl, meta = _split_official_native_domain(key, manifest, in_training_val=in_val)
+            meta["policy_label"] = policy.label
+        elif policy.kind == "structured_or_dhash":
+            tr, va, cl, meta = _split_structured_or_dhash_domain(
+                key,
+                manifest,
+                train_fraction=train_fraction,
+                max_samples_per_id=max_samples_per_id,
+                dhash_threshold=dhash_threshold,
+                seed=seed,
+                rng=rng,
+            )
+            meta["policy_label"] = policy.label
+        elif policy.kind == "identity_disjoint":
             tr, va, cl, meta = _split_identity_domain(
                 key, manifest, train_fraction=train_fraction, seed=seed, policy_kind=policy.kind
             )
@@ -250,13 +307,15 @@ def split_pool(
             )
             meta.setdefault("policy_label", policy.label)
         else:
-            tr, va, cl, meta = _split_dhash_domain(
+            tr, va, cl, meta = split_structured_or_dhash(
                 key,
                 manifest,
                 train_fraction=train_fraction,
                 max_samples_per_id=max_samples_per_id,
                 dhash_threshold=dhash_threshold,
+                seed=seed + hash(key) % 997,
                 rng=rng,
+                dhash_fn=_split_dhash_domain,
             )
             meta["policy_label"] = policy.label
         train_ids[key] = sorted(set(tr))
@@ -275,7 +334,8 @@ def split_pool(
             "train_fraction": train_fraction,
             "identities": total_ids,
             "per_dataset": per_dataset,
-            "policies": policy_summary(pool.sources),
+            "split_mode": pool.split_mode,
+            "policies": policy_summary(pool.sources, pool.split_mode),
         },
     )
 

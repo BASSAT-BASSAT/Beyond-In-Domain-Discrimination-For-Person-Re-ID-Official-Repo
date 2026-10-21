@@ -3,6 +3,8 @@
 Held-out **test** benchmarks (Market, MSMT17, Duke, Occluded-Duke, MARS) are never used for
 train/val. This document covers **in-pool** sources only.
 
+**Official citation / alignment audit:** [DATASET_PROTOCOL_SOURCES.md](DATASET_PROTOCOL_SOURCES.md).
+
 ## Summary
 
 | Dataset | Official train | Official val | Official test / eval | ReID-FM train/val policy |
@@ -10,8 +12,8 @@ train/val. This document covers **in-pool** sources only.
 | ORBench RGB | `train_annos.json` (600 IDs) | None | `test_gallery_and_queries.json` | Train IDs = official train only; **custom** identity holdout val (`reidfm_identity_disjoint_val`) |
 | PRID2011 | None (we add multi-shot `tr*` train rows) | None | cam_a query vs cam_b gallery | **Custom** identity holdout on `tr*` only; official test rows never in train/val |
 | RPIfield | Not standardized | Not standardized | Temporal / growing gallery (paper) | **Custom** identity holdout on train-folder IDs; adjust `converters.rpifield.splits` to your copy |
-| CUHK03-NP, LaST, Occ-PoseTrack, DeepChange, LPW, IUST, MOT17, MOT20 | Varies | None standardized for pool | Official eval where applicable | Optional `splits/datasets/<key>.json` from teammates; else **dHash fallback** |
-| Other pool sources | Dataset-specific | — | Official query/gallery where applicable | `reidfm_dhash_cluster_val` (default) |
+| CUHK03-NP, LaST, Occ-PoseTrack, DeepChange, LPW, IUST, MOT17, MOT20 | Varies | None standardized for pool | Official eval where applicable | **`pool_v2_official_val`:** official test as val; else **camera/scene → identity → dHash (~80/20)** |
+| Other pool sources | Dataset-specific | — | Official query/gallery where applicable | `cluster` mode: teammate file or **structured → dHash** (~80/20) |
 
 ### Teammate split files
 

@@ -19,6 +19,7 @@ class PoolConfig:
     ood: list[str]
     val_sets: list[str]
     test_sets: list[str]
+    split_mode: str = "cluster"  # cluster | official_native
     weight_mode: str = "sqrt_ids"
     domain_weights: dict[str, float] = field(default_factory=dict)
     converters: dict[str, dict] = field(default_factory=dict)
@@ -52,6 +53,8 @@ class PoolConfig:
         no_test = [key for key in self.val_sets + self.test_sets + self.ood if not get_dataset_spec(key).has_test]
         if no_test:
             raise ValueError(f"pool {self.name!r}: datasets without query/gallery listed for evaluation: {no_test}")
+        if self.split_mode not in ("cluster", "official_native"):
+            raise ValueError(f"split_mode must be cluster or official_native, got {self.split_mode!r}")
         if self.weight_mode not in WEIGHT_MODES:
             raise ValueError(f"weight_mode must be one of {WEIGHT_MODES}, got {self.weight_mode!r}")
         unknown = sorted(set(self.domain_weights) - set(self.sources))
@@ -69,6 +72,7 @@ def load_pool(path: str | Path) -> PoolConfig:
         ood=list(data.get("ood") or []),
         val_sets=list(data.get("val_sets") or []),
         test_sets=list(data.get("test_sets") or []),
+        split_mode=str(data.get("split_mode") or "cluster"),
         weight_mode=sampler.get("weight_mode", "sqrt_ids"),
         domain_weights={k: float(v) for k, v in (sampler.get("domain_weights") or {}).items()},
         converters=dict(data.get("converters") or {}),

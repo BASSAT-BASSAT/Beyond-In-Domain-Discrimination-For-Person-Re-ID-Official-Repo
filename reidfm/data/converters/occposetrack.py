@@ -32,30 +32,19 @@ def _parse(path: Path) -> tuple[str, str, int] | None:
     return str(int(pid)), video, int(frame_id[-4:])
 
 
-def convert(raw: Path, options: dict) -> list[SourceRow]:
-    train_dir = find_dir(raw, [options.get("train_dir", "train")], max_depth=3)
-    eval_names = [options["eval_dir"]] if options.get("eval_dir") else ["val", "test"]
-    eval_dir = find_dir(raw, eval_names, max_depth=3)
-    if train_dir is None or eval_dir is None:
-        raise FileNotFoundError(f"Occluded-PoseTrack: expected train/ and val|test/ folders under {raw}")
-
+def _eval_from_folder(eval_dir: Path, pid_prefix: str, gap: int) -> list[SourceRow]:
     rows: list[SourceRow] = []
-    for path in list_images(train_dir, recursive=True):
-        parsed = _parse(path)
-        if parsed:
-            pid, video, frame = parsed
-            rows.append(SourceRow(src=path, pid=pid, camid=video, split="train", tracklet_id=f"{pid}-{video}", frame=frame))
-
     if (eval_dir / "query").is_dir() and (eval_dir / "gallery").is_dir():
         for split in ("query", "gallery"):
             for path in list_images(eval_dir / split, recursive=True):
                 parsed = _parse(path)
                 if parsed:
                     pid, video, frame = parsed
-                    rows.append(SourceRow(src=path, pid=f"test{pid}", camid=video, split=split, frame=frame))
+                    rows.append(
+                        SourceRow(src=path, pid=f"{pid_prefix}{pid}", camid=video, split=split, frame=frame)
+                    )
         return rows
 
-    gap = int(options.get("min_frame_gap", 15))
     by_pid: dict[str, dict[str, list[tuple[int, Path]]]] = defaultdict(lambda: defaultdict(list))
     for path in list_images(eval_dir, recursive=True):
         parsed = _parse(path)
@@ -77,6 +66,40 @@ def convert(raw: Path, options: dict) -> list[SourceRow]:
         ]
         if not gallery:
             continue
-        rows.append(SourceRow(src=q_path, pid=f"test{pid}", camid="q", split="query", frame=q_frame))
-        rows += [SourceRow(src=p, pid=f"test{pid}", camid="g", split="gallery", frame=f) for _, f, p in gallery]
+        rows.append(SourceRow(src=q_path, pid=f"{pid_prefix}{pid}", camid="q", split="query", frame=q_frame))
+        rows += [
+            SourceRow(src=p, pid=f"{pid_prefix}{pid}", camid="g", split="gallery", frame=f) for _, f, p in gallery
+        ]
+    return rows
+
+
+def convert(raw: Path, options: dict) -> list[SourceRow]:
+    train_dir = find_dir(raw, [options.get("train_dir", "train")], max_depth=3)
+    if train_dir is None:
+        raise FileNotFoundError(f"Occluded-PoseTrack: expected train/ under {raw}")
+
+    rows: list[SourceRow] = []
+    for path in list_images(train_dir, recursive=True):
+        parsed = _parse(path)
+        if parsed:
+            pid, video, frame = parsed
+            rows.append(SourceRow(src=path, pid=pid, camid=video, split="train", tracklet_id=f"{pid}-{video}", frame=frame))
+
+    gap = int(options.get("min_frame_gap", 15))
+    eval_splits: list[str] = list(options.get("eval_splits") or [])
+    if options.get("eval_dir"):
+        eval_splits = [str(options["eval_dir"])]
+    if not eval_splits:
+        eval_splits = ["val", "test"]
+
+    any_eval = False
+    for split_name in eval_splits:
+        eval_dir = find_dir(raw, [split_name], max_depth=3)
+        if eval_dir is None:
+            continue
+        any_eval = True
+        rows.extend(_eval_from_folder(eval_dir, pid_prefix=f"{split_name}_", gap=gap))
+
+    if not any_eval:
+        raise FileNotFoundError(f"Occluded-PoseTrack: no val/test eval folders under {raw}")
     return rows

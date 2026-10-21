@@ -38,9 +38,12 @@ def convert_pattern_dirs(raw: Path, options: dict, defaults: dict | None = None)
     for split, folders in splits.items():
         if split not in ("train", "query", "gallery"):
             raise ValueError(f"unknown split {split!r}")
+        skip_missing_eval = bool(opts.get("skip_missing_eval_folders")) and split in ("query", "gallery")
         for folder_name in [folders] if isinstance(folders, str) else folders:
             folder = raw / folder_name
             if not folder.is_dir():
+                if skip_missing_eval:
+                    continue
                 raise FileNotFoundError(f"missing {split} folder {folder}")
             for path in list_images(folder, recursive=recursive):
                 if pid_from == "parent":
@@ -66,7 +69,12 @@ def convert_pattern_dirs(raw: Path, options: dict, defaults: dict | None = None)
 
 
 DEEPCHANGE_DEFAULTS = {
-    "splits": {"train": ["train-set"], "query": ["test-set-query"], "gallery": ["test-set-gallery"]},
+    "splits": {
+        "train": ["train-set"],
+        "query": ["val-set-query", "test-set-query"],
+        "gallery": ["val-set-gallery", "test-set-gallery"],
+    },
+    "skip_missing_eval_folders": True,
     "pid_regex": r"^P?(\d+)",
     "cam_regex": r"_C(\d+)",
     "test_pid_prefix": "",  # DeepChange ids are globally unique across splits

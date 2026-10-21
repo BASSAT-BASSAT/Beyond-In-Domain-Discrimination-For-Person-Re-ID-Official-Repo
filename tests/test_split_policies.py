@@ -16,10 +16,25 @@ from reidfm.data.split_policies import (
 )
 
 
-def test_orbench_policy_documented():
-    pol = get_split_policy("orbenchrgb")
-    assert pol.kind == "orbench_official_train"
-    assert CUSTOM_VAL_LABEL in pol.notes
+def test_orbench_policy_modes():
+    assert get_split_policy("orbenchrgb", "cluster").kind == "identity_disjoint"
+    assert get_split_policy("orbenchrgb", "official_native").kind == "official_native"
+
+
+def test_official_native_uses_all_train_pids():
+    from reidfm.data.leakage_split import _split_official_native_domain
+
+    rows = [
+        ManifestRow("a.jpg", "1", "1", "demo", "train"),
+        ManifestRow("b.jpg", "2", "1", "demo", "train"),
+        ManifestRow("q.jpg", "t9", "1", "demo", "query"),
+        ManifestRow("g.jpg", "t9", "2", "demo", "gallery"),
+    ]
+    m = Manifest("demo", Path("/tmp"), rows)
+    train, val, _, meta = _split_official_native_domain("demo", m, in_training_val=True)
+    assert train == ["1", "2"]
+    assert val == []
+    assert meta["in_training_eval"] is True
 
 
 def test_identity_disjoint_no_overlap():
@@ -48,6 +63,24 @@ def test_orbench_converter_official_files(tmp_path: Path):
     test_pids = {r.pid for r in rows if r.split != "train"}
     assert "1" in train_pids
     assert all(p.startswith("test") for p in test_pids)
+
+
+def test_last_train_only_in_train_eval_in_query_gallery(tmp_path: Path):
+    from reidfm.data.converters.last import convert as convert_last
+
+    root = tmp_path / "last_ds"
+    (root / "train" / "1").mkdir(parents=True)
+    (root / "train" / "1" / "1_0_0_0_0_1.jpg").write_bytes(b"x")
+    for split in ("val", "test"):
+        (root / split / "query").mkdir(parents=True, exist_ok=True)
+        (root / split / "gallery" / "9").mkdir(parents=True, exist_ok=True)
+        (root / split / "query" / "9_0_1.jpg").write_bytes(b"x")
+        (root / split / "gallery" / "9" / "9_0_2.jpg").write_bytes(b"x")
+    rows = convert_last(root, {"eval_splits": ["val", "test"]})
+    assert sum(1 for r in rows if r.split == "train") == 1
+    eval_rows = [r for r in rows if r.split != "train"]
+    assert len(eval_rows) == 4
+    assert {r.pid for r in eval_rows} == {"val_9", "test_9"}
 
 
 def test_prid_train_pids_disjoint_from_test(tmp_path: Path):

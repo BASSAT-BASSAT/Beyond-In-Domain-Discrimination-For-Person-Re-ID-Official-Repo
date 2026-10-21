@@ -25,7 +25,7 @@ def main() -> int:
     parser.add_argument("--pool", default="configs/datasets/pool_v2.yaml")
     parser.add_argument("--out", default="splits")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--train-fraction", type=float, default=0.85)
+    parser.add_argument("--train-fraction", type=float, default=0.8)
     parser.add_argument("--max-samples-per-id", type=int, default=4)
     parser.add_argument("--dhash-threshold", type=int, default=6)
     parser.add_argument("--embedder", default="dhash", help="dhash (default) or dinov2_vits14 (optional, requires torch)")

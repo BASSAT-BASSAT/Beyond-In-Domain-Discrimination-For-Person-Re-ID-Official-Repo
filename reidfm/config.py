@@ -151,12 +151,16 @@ def apply_pool(cfg, pool_path: str | Path | None = None):
     pool = resolve_pool(cfg, pool_path)
     cfg.REIDFM.POOL = str(pool.path)
     cfg.DATASETS.NAMES = tuple(pool.fastreid_names(pool.sources))
+    tests: list[str] = []
     if pool.val_sets:
-        cfg.DATASETS.TESTS = tuple(pool.fastreid_names(pool.val_sets))
-    elif cfg.REIDFM.VAL_MANIFEST:
-        cfg.DATASETS.TESTS = ("PoolV2ValM",)
-    else:
-        cfg.DATASETS.TESTS = tuple()
+        tests.extend(pool.fastreid_names(pool.val_sets))
+    val_manifest = repo_path(cfg.REIDFM.VAL_MANIFEST) / "manifest.csv" if cfg.REIDFM.VAL_MANIFEST else None
+    if val_manifest and val_manifest.is_file():
+        if "PoolV2ValM" not in tests:
+            tests.append("PoolV2ValM")
+    elif cfg.REIDFM.VAL_MANIFEST and not pool.val_sets:
+        tests.append("PoolV2ValM")
+    cfg.DATASETS.TESTS = tuple(tests)
     return pool
 
 
