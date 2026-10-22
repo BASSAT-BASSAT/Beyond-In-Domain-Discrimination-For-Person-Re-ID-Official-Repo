@@ -1,0 +1,123 @@
+{
+  "caveats": [
+    "Metadata and P3 retrieval checks cannot prove source-to-source/target acquisition independence.",
+    "Actual image bytes, runtime root paths, and pretrained checkpoint provenance were not checked.",
+    "Full train_manifest.csv and large P3 CSVs are local-only (gitignored); previews + JSON in repo."
+  ],
+  "data_images_and_paths_verified": false,
+  "exclusion_policy": {
+    "note": "No new exclusions invented or applied in P5; P4 must be completed separately",
+    "p4_approval_evidence": null,
+    "p4_status": "NOT_CLEARED"
+  },
+  "expected_full_program_sources": 9,
+  "num_selected_sources": 3,
+  "p3_p4_externally_approved": false,
+  "protocol_id": "dg_reid_multi_source_p5_v1",
+  "ready_for_finetuning": false,
+  "schema_version": "v1",
+  "scope": "Only the selected datasets; NOT all nine unless all members merged to Global",
+  "selected_datasets": [
+    "ORBench_RGB",
+    "PRID2011",
+    "RPIfield"
+  ],
+  "source_versions": [
+    {
+      "dataset": "ORBench_RGB",
+      "filename": "orbench_rgb_p3_provisional.csv",
+      "role": "p3_assignments",
+      "sha256": "b384eacec9509a18fc6125d940a7063d2776a0059f1a83454ca855d12efba56b"
+    },
+    {
+      "dataset": "ORBench_RGB",
+      "filename": "orbench_rgb_unified_v1.csv",
+      "role": "frozen_unified",
+      "sha256": "3ea915f1e43198acafb582895819c6111fea0f17004ca9252f871eb4221d30dc"
+    },
+    {
+      "dataset": "PRID2011",
+      "filename": "prid2011_p3_provisional.csv",
+      "role": "p3_assignments",
+      "sha256": "0c4a43a339e3c912163de8dd18daa06c469d5740615bcdf4811178b10b09f3de"
+    },
+    {
+      "dataset": "PRID2011",
+      "filename": "prid2011_unified_v1.csv",
+      "role": "frozen_unified",
+      "sha256": "f9e5877bf53da59f525d863a4425f0b97939dc890cff4f49fd207f4e6824f6b7"
+    },
+    {
+      "dataset": "RPIfield",
+      "filename": "rpifield_p3_provisional.csv",
+      "role": "p3_assignments",
+      "sha256": "4f66116b2c327e836c928e3fea44906e535856fdcaee21882c6f4b4b1c15f7fc"
+    },
+    {
+      "dataset": "RPIfield",
+      "filename": "rpifield_unified_v1.csv",
+      "role": "frozen_unified",
+      "sha256": "4c0de5d7fced5738b24d97c3fb1309977763b791f18289cf4f3c1478eb7cddcc"
+    }
+  ],
+  "split_policy": {
+    "identity_disjointness_checked": true,
+    "method": "P3 per-image roles from build_member_handoff_json / p3_split_sources",
+    "policy_mode": "official_member3",
+    "seed_reported": 42,
+    "per_dataset": {
+      "ORBench_RGB": {
+        "split_policy": "identity_disjoint",
+        "split_meta": {
+          "strategy": "identity_disjoint",
+          "val_fraction": 0.2
+        },
+        "train_identities": 480,
+        "validation_identities": 120,
+        "train_images": 21564,
+        "validation_images": 5368
+      },
+      "PRID2011": {
+        "split_policy": "identity_disjoint",
+        "split_meta": {
+          "strategy": "identity_disjoint",
+          "val_fraction": 0.2
+        },
+        "train_identities": 160,
+        "validation_identities": 40,
+        "train_images": 31690,
+        "validation_images": 8343
+      },
+      "RPIfield": {
+        "split_policy": "camera_scene_disjoint",
+        "split_meta": {
+          "strategy": "camera_scene",
+          "n_groups": 10,
+          "n_train_ids": 88,
+          "n_val_ids": 24,
+          "train_fraction_target": 0.8,
+          "train_fraction_actual": 0.7857142857142857
+        },
+        "train_identities": 88,
+        "validation_identities": 24,
+        "train_images": 179996,
+        "validation_images": 31488
+      }
+    }
+  },
+  "status": "PROVISIONAL_P3_P4_PENDING",
+  "training_sources": [
+    "ORBench_RGB",
+    "PRID2011",
+    "RPIfield"
+  ],
+  "global_class_mapping": {
+    "class_id_offset": 1774,
+    "continues_after_member": "Member 1",
+    "num_training_identities": 728,
+    "class_id_range_inclusive": [
+      1774,
+      2501
+    ]
+  }
+}

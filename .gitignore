@@ -5,6 +5,10 @@ fast-reid/
 raw/
 pool/
 datasets/
+# Local unified handoffs (P3 inputs); committed outputs live under unified/final_dataset/
+csv files/
+# Large P3 role files (keep p3_split_preview.json + Member */ JSON handoff in git)
+unified/final_dataset/**/p3/*_p3_provisional.csv
 weights/
 outputs/
 logs/

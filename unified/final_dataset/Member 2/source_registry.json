@@ -1,0 +1,29 @@
+{
+  "schema_version": "v1",
+  "sources": [
+    {
+      "dataset": "ORBench_RGB",
+      "dataset_root_id": "ORBench_RGB",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_ORBENCH",
+      "train_rows": 21564,
+      "validation_unique_rows": 5368
+    },
+    {
+      "dataset": "PRID2011",
+      "dataset_root_id": "PRID2011",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_PRID2011",
+      "train_rows": 31690,
+      "validation_unique_rows": 8343
+    },
+    {
+      "dataset": "RPIfield",
+      "dataset_root_id": "RPIfield",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_RPIFIELD",
+      "train_rows": 179996,
+      "validation_unique_rows": 31488
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "status": "PROVISIONAL \u2014 DeepChange exclusion provenance and official evaluation checks pending",
+  "seed": 42,
+  "val_fraction": 0.2,
+  "policy_mode": "official_member3",
+  "train_fraction_camera": 0.8,
+  "note": "P3 is metadata-only; P4 cross-dataset leakage and official evaluation checks still required",
+  "datasets": {
+    "ORBench_RGB": {
+      "input": "c:\\Users\\Legion 5\\Desktop\\Grad Project\\Person-Re-ID-Foundational-model\\csv files\\New folder\\orbench_rgb_unified_v1.csv",
+      "input_sha256": "3ea915f1e43198acafb582895819c6111fea0f17004ca9252f871eb4221d30dc",
+      "rows": 26932,
+      "split_policy": "identity_disjoint",
+      "split_meta": {
+        "strategy": "identity_disjoint",
+        "val_fraction": 0.2
+      },
+      "identities": 600,
+      "train_identities": 480,
+      "validation_identities": 120,
+      "train_images": 21564,
+      "validation_images": 5368,
+      "observed_views_or_camera_codes": {
+        "train": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9"
+        ],
+        "validation": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "7",
+          "8",
+          "9"
+        ]
+      },
+      "observed_video_counts": {
+        "train": 0,
+        "validation": 0
+      },
+      "identity_overlap": 0,
+      "row_conservation": true,
+      "output": "c:\\Users\\Legion 5\\Desktop\\Grad Project\\Person-Re-ID-Foundational-model\\unified\\final_dataset\\Member 3\\p3\\orbench_rgb_p3_provisional.csv",
+      "output_sha256": "b384eacec9509a18fc6125d940a7063d2776a0059f1a83454ca855d12efba56b"
+    },
+    "PRID2011": {
+      "input": "c:\\Users\\Legion 5\\Desktop\\Grad Project\\Person-Re-ID-Foundational-model\\csv files\\New folder\\prid2011_unified_v1.csv",
+      "input_sha256": "f9e5877bf53da59f525d863a4425f0b97939dc890cff4f49fd207f4e6824f6b7",
+      "rows": 40033,
+      "split_policy": "identity_disjoint",
+      "split_meta": {
+        "strategy": "identity_disjoint",
+        "val_fraction": 0.2
+      },
+      "identities": 200,
+      "train_identities": 160,
+      "validation_identities": 40,
+      "train_images": 31690,
+      "validation_images": 8343,
+      "observed_views_or_camera_codes": {
+        "train": [
+          "cam_a",
+          "cam_b"
+        ],
+        "validation": [
+          "cam_a",
+          "cam_b"
+        ]
+      },
+      "observed_video_counts": {
+        "train": 0,
+        "validation": 0
+      },
+      "identity_overlap": 0,
+      "row_conservation": true,
+      "output": "c:\\Users\\Legion 5\\Desktop\\Grad Project\\Person-Re-ID-Foundational-model\\unified\\final_dataset\\Member 3\\p3\\prid2011_p3_provisional.csv",
+      "output_sha256": "0c4a43a339e3c912163de8dd18daa06c469d5740615bcdf4811178b10b09f3de"
+    },
+    "RPIfield": {
+      "input": "c:\\Users\\Legion 5\\Desktop\\Grad Project\\Person-Re-ID-Foundational-model\\csv files\\New folder\\rpifield_unified_v1.csv",
+      "input_sha256": "4c0de5d7fced5738b24d97c3fb1309977763b791f18289cf4f3c1478eb7cddcc",
+      "rows": 211484,
+      "split_policy": "camera_scene_disjoint",
+      "split_meta": {
+        "strategy": "camera_scene",
+        "n_groups": 10,
+        "n_train_ids": 88,
+        "n_val_ids": 24,
+        "train_fraction_target": 0.8,
+        "train_fraction_actual": 0.7857142857142857
+      },
+      "identities": 112,
+      "train_identities": 88,
+      "validation_identities": 24,
+      "train_images": 179996,
+      "validation_images": 31488,
+      "observed_views_or_camera_codes": {
+        "train": [
+          "1",
+          "10",
+          "11",
+          "12",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9"
+        ],
+        "validation": [
+          "1",
+          "10",
+          "11",
+          "12",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9"
+        ]
+      },
+      "observed_video_counts": {
+        "train": 0,
+        "validation": 0
+      },
+      "identity_overlap": 0,
+      "row_conservation": true,
+      "output": "c:\\Users\\Legion 5\\Desktop\\Grad Project\\Person-Re-ID-Foundational-model\\unified\\final_dataset\\Member 3\\p3\\rpifield_p3_provisional.csv",
+      "output_sha256": "4f66116b2c327e836c928e3fea44906e535856fdcaee21882c6f4b4b1c15f7fc"
+    }
+  }
+}
