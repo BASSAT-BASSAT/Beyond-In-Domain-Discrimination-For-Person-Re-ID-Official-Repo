@@ -1,0 +1,29 @@
+{
+  "schema_version": "v1",
+  "sources": [
+    {
+      "dataset": "IUST_PersonReID",
+      "dataset_root_id": "IUST_PersonReID",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_IUST",
+      "train_rows": 57540,
+      "validation_unique_rows": 14853
+    },
+    {
+      "dataset": "LaST",
+      "dataset_root_id": "LaST",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_LAST",
+      "train_rows": 71248,
+      "validation_unique_rows": 21379
+    },
+    {
+      "dataset": "LPW",
+      "dataset_root_id": "LPW",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_LPW",
+      "train_rows": 338952,
+      "validation_unique_rows": 79495
+    }
+  ]
+}

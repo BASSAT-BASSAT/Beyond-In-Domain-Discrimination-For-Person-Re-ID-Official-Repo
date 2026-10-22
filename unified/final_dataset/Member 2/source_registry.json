@@ -3,7 +3,7 @@
   "sources": [
     {
       "dataset": "ORBench_RGB",
-      "dataset_root_id": "ORBench_RGB",
+      "dataset_root_id": "ORBench",
       "relative_base_path": "",
       "root_env_var": "DGREID_ROOT_ORBENCH",
       "train_rows": 21564,

@@ -1,0 +1,77 @@
+{
+  "schema_version": "v1",
+  "sources": [
+    {
+      "dataset": "CUHK03_NP",
+      "dataset_root_id": "CUHK03_NP",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_CUHK03_NP",
+      "train_rows": 5892,
+      "validation_unique_rows": 1473
+    },
+    {
+      "dataset": "DeepChange",
+      "dataset_root_id": "DeepChange",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_DEEPCHANGE",
+      "train_rows": 60916,
+      "validation_unique_rows": 14093
+    },
+    {
+      "dataset": "IUST_PersonReID",
+      "dataset_root_id": "IUST_PersonReID",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_IUST",
+      "train_rows": 57540,
+      "validation_unique_rows": 14853
+    },
+    {
+      "dataset": "LPW",
+      "dataset_root_id": "LPW",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_LPW",
+      "train_rows": 338952,
+      "validation_unique_rows": 79495
+    },
+    {
+      "dataset": "LaST",
+      "dataset_root_id": "LaST",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_LAST",
+      "train_rows": 71248,
+      "validation_unique_rows": 21379
+    },
+    {
+      "dataset": "ORBench_RGB",
+      "dataset_root_id": "ORBench",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_ORBENCH",
+      "train_rows": 21564,
+      "validation_unique_rows": 5368
+    },
+    {
+      "dataset": "Occluded-PoseTrack-ReID",
+      "dataset_root_id": "Occluded-PoseTrack-ReID",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_OCCLUDED_POSETRACK_REID",
+      "train_rows": 14266,
+      "validation_unique_rows": 3632
+    },
+    {
+      "dataset": "PRID2011",
+      "dataset_root_id": "PRID2011",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_PRID2011",
+      "train_rows": 31690,
+      "validation_unique_rows": 8343
+    },
+    {
+      "dataset": "RPIfield",
+      "dataset_root_id": "RPIfield",
+      "relative_base_path": "",
+      "root_env_var": "DGREID_ROOT_RPIFIELD",
+      "train_rows": 179996,
+      "validation_unique_rows": 31488
+    }
+  ]
+}

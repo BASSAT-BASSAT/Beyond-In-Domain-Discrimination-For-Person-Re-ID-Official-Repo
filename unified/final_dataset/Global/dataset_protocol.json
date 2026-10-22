@@ -1,0 +1,217 @@
+{
+  "candidate_identity_labels_p2": 11297,
+  "candidate_images_p2": 940809,
+  "caveats": [
+    "P4 cross-source/cross-target acquisition and image leakage NOT cleared.",
+    "No real images opened or paths checked; verify all image roots on Kaggle before training.",
+    "Source data is merged without revising the three member split policies or class IDs.",
+    "Different internal validation protocols are not interchangeable with official benchmark protocols.",
+    "LaST official validation contains 20,000 unlabeled gallery distractors, preserved as nonmatching IDs.",
+    "Some Member 1 validation samples occur in two directional retrieval protocols; validate by (protocol, sample_uid).",
+    "Market1501 and MARS remain unseen targets; do not use them for model selection.",
+    "Keep both global full manifest CSVs local; push only previews and small metadata after review."
+  ],
+  "class_id_range_inclusive": [
+    0,
+    10035
+  ],
+  "dataset_to_member": {
+    "CUHK03_NP": "Member 1",
+    "DeepChange": "Member 1",
+    "IUST_PersonReID": "Member 3",
+    "LPW": "Member 3",
+    "LaST": "Member 3",
+    "ORBench_RGB": "Member 2",
+    "Occluded-PoseTrack-ReID": "Member 1",
+    "PRID2011": "Member 2",
+    "RPIfield": "Member 2"
+  },
+  "last_official_val_gallery_distractors": 20000,
+  "last_official_val_query_identities": 56,
+  "last_official_validation_images_outside_p2_candidate_pool": 21379,
+  "member_counts": {
+    "Member 1": {
+      "train": 81074,
+      "validation_rows": 20671,
+      "validation_unique": 19198
+    },
+    "Member 2": {
+      "train": 233250,
+      "validation_rows": 45199,
+      "validation_unique": 45199
+    },
+    "Member 3": {
+      "train": 467740,
+      "validation_rows": 115727,
+      "validation_unique": 115727
+    }
+  },
+  "member_provenance": [
+    {
+      "dataset_protocol_sha256": "811f82b4c6bed3c83238b3e0321d146e86def3d63b9cd5315f4c173d7de04ee1",
+      "mapping_sha256": "9c0d88c63e2d70c52f3130740396fb5458f2451b9b285bde1d3e67032e6296db",
+      "member": "Member 1",
+      "source_registry_sha256": "00a67375b546ea5dc4797a1e06299e77bafe12cdac914a4114ac3cab7fadb007",
+      "train_manifest_sha256": "82929b6ab448d51804e72ceace479daa0da7bbbebc241c30c5f12b0016981d4e",
+      "validation_manifest_sha256": "126296bdf59508cfdcf36d0d047fd789f4d6517c1da772f0133c9e8da17f7af9"
+    },
+    {
+      "dataset_protocol_sha256": "23cfb9a44b6c8404c81a9a26375100c29be022902dd0319e455201f559fad662",
+      "mapping_sha256": "b6ed7bc906db982eace37cdff9e2f43aa8824cd2fbfeee4e90b8de782c70f3cf",
+      "member": "Member 2",
+      "source_registry_sha256": "b013ca6e2d58d20c5d7a36cbb9bdb1331ef167f336a220805833d60eba812818",
+      "train_manifest_sha256": "cf488dea25edaaef52ab757e099d9829dd819192c328d12191cdcb5f94824bb5",
+      "validation_manifest_sha256": "bccb7a23112aa6fec3a726bb75b783dde719cbd69ff2742f3c27af41a6a71355"
+    },
+    {
+      "dataset_protocol_sha256": "7c6fda1ac70b743a806a22878e311aa3627a8bbaf59590f7029dbd9ee9de3404",
+      "mapping_sha256": "b7817b1eb2c8d29b08d837bd68e7a0e51f2df6b7bea26fa49633d9539ef4f345",
+      "member": "Member 3",
+      "source_registry_sha256": "7e706a64c1cb286476ded92f4738afa07fd821aa264defb9602bb7036f8ffa45",
+      "train_manifest_sha256": "7f2268ec26dec6fed2be3c4f8c754372db5e0fa9f54903a7a14905273c1221f1",
+      "validation_manifest_sha256": "397e395c7ac1ec8838e01eec57f88d96a1d2eede3fd90368961f05ab6ecc4957"
+    }
+  ],
+  "num_selected_sources": 9,
+  "p4_approval_evidence": null,
+  "p4_status": "NOT_CLEARED",
+  "per_dataset": {
+    "CUHK03_NP": {
+      "gallery": 1473,
+      "query": 1473,
+      "train": 5892,
+      "validation_rows": 2946,
+      "validation_unique": 1473
+    },
+    "DeepChange": {
+      "gallery": 13580,
+      "query": 513,
+      "train": 60916,
+      "validation_rows": 14093,
+      "validation_unique": 14093
+    },
+    "IUST_PersonReID": {
+      "gallery": 14614,
+      "query": 239,
+      "train": 57540,
+      "validation_rows": 14853,
+      "validation_unique": 14853
+    },
+    "LPW": {
+      "gallery": 79100,
+      "query": 395,
+      "train": 338952,
+      "validation_rows": 79495,
+      "validation_unique": 79495
+    },
+    "LaST": {
+      "gallery": 21279,
+      "query": 100,
+      "train": 71248,
+      "validation_rows": 21379,
+      "validation_unique": 21379
+    },
+    "ORBench_RGB": {
+      "gallery": 5277,
+      "query": 91,
+      "train": 21564,
+      "validation_rows": 5368,
+      "validation_unique": 5368
+    },
+    "Occluded-PoseTrack-ReID": {
+      "gallery": 3432,
+      "query": 200,
+      "train": 14266,
+      "validation_rows": 3632,
+      "validation_unique": 3632
+    },
+    "PRID2011": {
+      "gallery": 8303,
+      "query": 40,
+      "train": 31690,
+      "validation_rows": 8343,
+      "validation_unique": 8343
+    },
+    "RPIfield": {
+      "gallery": 31464,
+      "query": 24,
+      "train": 179996,
+      "validation_rows": 31488,
+      "validation_unique": 31488
+    }
+  },
+  "protocol_id": "dg_reid_global_p3_p5_v1",
+  "ready_for_finetuning": false,
+  "retrieval_protocols": {
+    "cuhk03_internal_c1_to_c2_v1": {
+      "dataset": "CUHK03_NP",
+      "gallery_images": 754,
+      "query_images": 719
+    },
+    "cuhk03_internal_c2_to_c1_v1": {
+      "dataset": "CUHK03_NP",
+      "gallery_images": 719,
+      "query_images": 754
+    },
+    "deepchange_internal_cross_tracklet_v1": {
+      "dataset": "DeepChange",
+      "gallery_images": 13580,
+      "query_images": 513
+    },
+    "iust_internal_cross_camera_identity_val_v1": {
+      "dataset": "IUST_PersonReID",
+      "gallery_images": 14614,
+      "query_images": 239
+    },
+    "last_official_val_query_gallery_v1": {
+      "dataset": "LaST",
+      "gallery_images": 21279,
+      "query_images": 100
+    },
+    "lpw_internal_cross_view_identity_val_v1": {
+      "dataset": "LPW",
+      "gallery_images": 79100,
+      "query_images": 395
+    },
+    "orbench_rgb_internal_cross_context_val_v2": {
+      "dataset": "ORBench_RGB",
+      "gallery_images": 5277,
+      "query_images": 91
+    },
+    "posetrack_internal_same_or_cross_video_v1": {
+      "dataset": "Occluded-PoseTrack-ReID",
+      "gallery_images": 3432,
+      "query_images": 200
+    },
+    "prid2011_internal_cross_context_val_v2": {
+      "dataset": "PRID2011",
+      "gallery_images": 8303,
+      "query_images": 40
+    },
+    "rpifield_internal_cross_context_val_v2": {
+      "dataset": "RPIfield",
+      "gallery_images": 31464,
+      "query_images": 24
+    }
+  },
+  "schema_version": "v1",
+  "selected_datasets": [
+    "CUHK03_NP",
+    "DeepChange",
+    "IUST_PersonReID",
+    "LPW",
+    "LaST",
+    "ORBench_RGB",
+    "Occluded-PoseTrack-ReID",
+    "PRID2011",
+    "RPIfield"
+  ],
+  "source_candidate_val_identities_p3": 1261,
+  "source_images_or_paths_opened_in_this_run": false,
+  "source_official_test_used": false,
+  "status": "PROVISIONAL_P4_PENDING",
+  "train_classes": 10036,
+  "train_images": 782064,
+  "validation_manifest_rows": 181597,
+  "validation_unique_images": 180124
+}

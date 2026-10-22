@@ -1,0 +1,97 @@
+{
+  "actual_image_bytes_verified_in_this_run": false,
+  "caveats": [
+    "P4 source-source/source-target leakage has NOT been cleared.",
+    "Source imagery and root image paths were NOT accessed or re-decoded in this script; audit reports are historical.",
+    "IUST/LPW query/gallery are custom internal retrieval protocols; evaluator must apply appropriate camera/view matching rules.",
+    "LaST val protocol is official but dominated by same-video positives; do not interpret as cross-video DG proof.",
+    "Final unseen domains (Market1501/MARS) are never used for model selection.",
+    "Full CSV manifests are local-only. Generate 10-row previews separately for git."
+  ],
+  "global_classifier_offset": 2502,
+  "identity_holdout_fraction_target": 0.2,
+  "input_sha256": {
+    "iust_unified_v1.csv": "ae577916bf2fd79cdb275b6c36bf2b223243ae4228af16499b7f28a2008a3503",
+    "last_unified_v1.csv": "10f69e3cc005db46f111f49ae9f1872b01b0cc74713c744e61c08dc545f1d256",
+    "lpw_unified_v1.csv": "0f9c8d5808b3b935750dae0136ac88b4670e514c323d75cd28f0cd78969a0354",
+    "manifests/LaST/last_manifest.csv": "847de9c30857147eaa50090feae8d1ef28dd0a8095b09119b9690c81f5aa4379"
+  },
+  "last_validation_distractor_policy": "All 20000 unlabeled gallery images retained. Each receives unique nonmatching validation-only identity_key; never a supervised class.",
+  "num_training_classes": 7534,
+  "p4_approval_evidence": null,
+  "p4_status": "NOT_CLEARED",
+  "per_dataset": {
+    "IUST_PersonReID": {
+      "camera_semantics": "physical_camera_code",
+      "gallery_images": 14614,
+      "p3_policy": "deterministic_identity_disjoint_internal_val",
+      "p3_validation_protocol_id": "iust_internal_cross_camera_identity_val_v1",
+      "query_images": 239,
+      "source_candidate_ids": 1193,
+      "source_candidate_images": 72393,
+      "train_ids": 954,
+      "train_images": 57540,
+      "val_ids": 239,
+      "validation_images": 14853
+    },
+    "LPW": {
+      "camera_semantics": "scene_local_view",
+      "gallery_images": 79100,
+      "p3_policy": "deterministic_identity_disjoint_internal_val",
+      "p3_validation_protocol_id": "lpw_internal_cross_view_identity_val_v1",
+      "query_images": 395,
+      "source_candidate_ids": 1975,
+      "source_candidate_images": 418447,
+      "train_ids": 1580,
+      "train_images": 338952,
+      "val_ids": 395,
+      "validation_images": 79495
+    },
+    "LaST": {
+      "camera_semantics": "not_available",
+      "distractor_gallery_images": 20000,
+      "gallery_images": 21279,
+      "labeled_gallery_images": 1279,
+      "official_val_identity_match_checked": true,
+      "p3_policy": "official_train_and_official_val_query_gallery",
+      "p3_validation_protocol_id": "last_official_val_query_gallery_v1",
+      "query_images": 100,
+      "source_candidate_ids": 5000,
+      "source_candidate_images": 71248,
+      "train_ids": 5000,
+      "train_images": 71248,
+      "val_ids": 56,
+      "validation_images": 21379
+    }
+  },
+  "prior_member_mappings": [
+    {
+      "classes": 1774,
+      "member": "Member 1",
+      "sha256": "9c0d88c63e2d70c52f3130740396fb5458f2451b9b285bde1d3e67032e6296db"
+    },
+    {
+      "classes": 728,
+      "member": "Member 2",
+      "sha256": "b6ed7bc906db982eace37cdff9e2f43aa8824cd2fbfeee4e90b8de782c70f3cf"
+    }
+  ],
+  "protocol_id": "dg_reid_member3_p3_p5_v2",
+  "ready_for_finetuning": false,
+  "schema_version": "v1",
+  "seed": 42,
+  "selected_datasets": [
+    "IUST_PersonReID",
+    "LaST",
+    "LPW"
+  ],
+  "source_official_test_used": false,
+  "status": "PROVISIONAL_P4_PENDING",
+  "train_images": 467740,
+  "validation_images": 115727,
+  "validation_roles_are_official": {
+    "IUST_PersonReID": false,
+    "LPW": false,
+    "LaST": true
+  }
+}

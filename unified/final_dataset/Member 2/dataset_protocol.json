@@ -1,123 +1,89 @@
 {
-  "caveats": [
-    "Metadata and P3 retrieval checks cannot prove source-to-source/target acquisition independence.",
-    "Actual image bytes, runtime root paths, and pretrained checkpoint provenance were not checked.",
-    "Full train_manifest.csv and large P3 CSVs are local-only (gitignored); previews + JSON in repo."
-  ],
-  "data_images_and_paths_verified": false,
-  "exclusion_policy": {
-    "note": "No new exclusions invented or applied in P5; P4 must be completed separately",
-    "p4_approval_evidence": null,
-    "p4_status": "NOT_CLEARED"
-  },
-  "expected_full_program_sources": 9,
-  "num_selected_sources": 3,
-  "p3_p4_externally_approved": false,
-  "protocol_id": "dg_reid_multi_source_p5_v1",
-  "ready_for_finetuning": false,
   "schema_version": "v1",
-  "scope": "Only the selected datasets; NOT all nine unless all members merged to Global",
+  "protocol_id": "dg_reid_member2_repaired_existing_class_mapping_v2",
+  "status": "PROVISIONAL_P4_PENDING",
+  "ready_for_finetuning": false,
+  "p4_status": "NOT_CLEARED",
+  "source_official_test_used": false,
+  "actual_images_or_paths_opened_in_this_run": false,
   "selected_datasets": [
     "ORBench_RGB",
     "PRID2011",
     "RPIfield"
   ],
-  "source_versions": [
-    {
-      "dataset": "ORBench_RGB",
-      "filename": "orbench_rgb_p3_provisional.csv",
-      "role": "p3_assignments",
-      "sha256": "b384eacec9509a18fc6125d940a7063d2776a0059f1a83454ca855d12efba56b"
+  "input_sha256": {
+    "orbench_rgb_unified_v1.csv": "3ea915f1e43198acafb582895819c6111fea0f17004ca9252f871eb4221d30dc",
+    "prid2011_unified_v1.csv": "f9e5877bf53da59f525d863a4425f0b97939dc890cff4f49fd207f4e6824f6b7",
+    "rpifield_unified_v1.csv": "4c0de5d7fced5738b24d97c3fb1309977763b791f18289cf4f3c1478eb7cddcc"
+  },
+  "prior_member_mapping_sha256": {
+    "member1": "9c0d88c63e2d70c52f3130740396fb5458f2451b9b285bde1d3e67032e6296db",
+    "member2": "b6ed7bc906db982eace37cdff9e2f43aa8824cd2fbfeee4e90b8de782c70f3cf"
+  },
+  "global_classifier_offset": 1774,
+  "global_classifier_last_id": 2501,
+  "num_training_classes": 728,
+  "seed_for_existing_split": 42,
+  "membership_source": "Previously committed Member 2 identity_class_mapping.json; membership preserved exactly",
+  "p3_policies": {
+    "ORBench_RGB": "existing_identity_disjoint_80_20_internal_validation",
+    "PRID2011": "existing_identity_disjoint_80_20_internal_validation",
+    "RPIfield": "existing_identity_disjoint_holdout_grouped_by_dominant_camera_in_historical_script; NOT camera-disjoint"
+  },
+  "validation_protocol": "custom one query per eligible identity from minimum sample UID; remaining samples gallery; queries require cross-camera-context gallery positive; single-context validation identities are gallery-only",
+  "per_dataset": {
+    "ORBench_RGB": {
+      "candidate_images": 26932,
+      "candidate_ids": 600,
+      "train_images": 21564,
+      "validation_images": 5368,
+      "train_ids": 480,
+      "validation_ids": 120,
+      "query_ids": 91,
+      "gallery_only_ids": 29,
+      "query_images": 91,
+      "gallery_images": 5277,
+      "dataset_root_id": "ORBench",
+      "camera_semantics": "as_in_frozen_unified"
     },
-    {
-      "dataset": "ORBench_RGB",
-      "filename": "orbench_rgb_unified_v1.csv",
-      "role": "frozen_unified",
-      "sha256": "3ea915f1e43198acafb582895819c6111fea0f17004ca9252f871eb4221d30dc"
+    "PRID2011": {
+      "candidate_images": 40033,
+      "candidate_ids": 200,
+      "train_images": 31690,
+      "validation_images": 8343,
+      "train_ids": 160,
+      "validation_ids": 40,
+      "query_ids": 40,
+      "gallery_only_ids": 0,
+      "query_images": 40,
+      "gallery_images": 8303,
+      "dataset_root_id": "PRID2011",
+      "camera_semantics": "as_in_frozen_unified"
     },
-    {
-      "dataset": "PRID2011",
-      "filename": "prid2011_p3_provisional.csv",
-      "role": "p3_assignments",
-      "sha256": "0c4a43a339e3c912163de8dd18daa06c469d5740615bcdf4811178b10b09f3de"
-    },
-    {
-      "dataset": "PRID2011",
-      "filename": "prid2011_unified_v1.csv",
-      "role": "frozen_unified",
-      "sha256": "f9e5877bf53da59f525d863a4425f0b97939dc890cff4f49fd207f4e6824f6b7"
-    },
-    {
-      "dataset": "RPIfield",
-      "filename": "rpifield_p3_provisional.csv",
-      "role": "p3_assignments",
-      "sha256": "4f66116b2c327e836c928e3fea44906e535856fdcaee21882c6f4b4b1c15f7fc"
-    },
-    {
-      "dataset": "RPIfield",
-      "filename": "rpifield_unified_v1.csv",
-      "role": "frozen_unified",
-      "sha256": "4c0de5d7fced5738b24d97c3fb1309977763b791f18289cf4f3c1478eb7cddcc"
-    }
-  ],
-  "split_policy": {
-    "identity_disjointness_checked": true,
-    "method": "P3 per-image roles from build_member_handoff_json / p3_split_sources",
-    "policy_mode": "official_member3",
-    "seed_reported": 42,
-    "per_dataset": {
-      "ORBench_RGB": {
-        "split_policy": "identity_disjoint",
-        "split_meta": {
-          "strategy": "identity_disjoint",
-          "val_fraction": 0.2
-        },
-        "train_identities": 480,
-        "validation_identities": 120,
-        "train_images": 21564,
-        "validation_images": 5368
-      },
-      "PRID2011": {
-        "split_policy": "identity_disjoint",
-        "split_meta": {
-          "strategy": "identity_disjoint",
-          "val_fraction": 0.2
-        },
-        "train_identities": 160,
-        "validation_identities": 40,
-        "train_images": 31690,
-        "validation_images": 8343
-      },
-      "RPIfield": {
-        "split_policy": "camera_scene_disjoint",
-        "split_meta": {
-          "strategy": "camera_scene",
-          "n_groups": 10,
-          "n_train_ids": 88,
-          "n_val_ids": 24,
-          "train_fraction_target": 0.8,
-          "train_fraction_actual": 0.7857142857142857
-        },
-        "train_identities": 88,
-        "validation_identities": 24,
-        "train_images": 179996,
-        "validation_images": 31488
-      }
+    "RPIfield": {
+      "candidate_images": 211484,
+      "candidate_ids": 112,
+      "train_images": 179996,
+      "validation_images": 31488,
+      "train_ids": 88,
+      "validation_ids": 24,
+      "query_ids": 24,
+      "gallery_only_ids": 0,
+      "query_images": 24,
+      "gallery_images": 31464,
+      "dataset_root_id": "RPIfield",
+      "camera_semantics": "as_in_frozen_unified"
     }
   },
-  "status": "PROVISIONAL_P3_P4_PENDING",
-  "training_sources": [
-    "ORBench_RGB",
-    "PRID2011",
-    "RPIfield"
-  ],
-  "global_class_mapping": {
-    "class_id_offset": 1774,
-    "continues_after_member": "Member 1",
-    "num_training_identities": 728,
-    "class_id_range_inclusive": [
-      1774,
-      2501
-    ]
-  }
+  "train_images": 233250,
+  "validation_images": 45199,
+  "previous_p3_split_preview_json": "historical evidence only: contains stale Member 3 paths and an overstated camera-disjoint claim",
+  "caveats": [
+    "This repair does not recompute training membership; it reproduces the committed 728-class mapping.",
+    "RPIfield dominant-camera group holdout does NOT demonstrate camera/scene disjointness; only IDs are disjoint.",
+    "ORBench_RGB/PRID2011/RPIfield retrieval evaluation is custom internal, NOT official.",
+    "No actual images opened; path existence and P4 cross-dataset overlaps remain unchecked.",
+    "Any revised membership or class mapping requires regenerating Member 3 and Global mappings.",
+    "Full CSV manifests are local-only; commit previews and JSON only."
+  ]
 }
