@@ -22,6 +22,12 @@ def add_reidfm_config(cfg) -> None:
     cfg.REIDFM = CN()
     # Pool yaml (configs/datasets/*.yaml): sources -> DATASETS.NAMES, val_sets -> DATASETS.TESTS.
     cfg.REIDFM.POOL = "configs/datasets/pool_v2.yaml"
+    # Data backend: legacy Pool V2 or packed Global P3/P5.
+    cfg.REIDFM.DATA_FORMAT = "LEGACY"
+    cfg.REIDFM.V3_TRAIN_MANIFEST = ""
+    cfg.REIDFM.V3_VAL_MANIFEST = ""
+    cfg.REIDFM.V3_PACK_ROOT = ""
+    cfg.REIDFM.V3_PROTOCOL_ID = "dg_reid_global_p3_p5_v1"
     # Non-empty lists override the pool's sources / val_sets (still validated against its OOD sets).
     cfg.REIDFM.SOURCES = []
     cfg.REIDFM.VAL_SETS = []
@@ -196,6 +202,130 @@ def resolve_output_dir(cfg, output_dir: str | None = None) -> str:
     return cfg.OUTPUT_DIR
 
 
+
+def _v3_num_classes_from_manifest(manifest_path: str | Path) -> int:
+    """Validate Global train identity/class mapping and infer dense classifier size."""
+    import csv
+
+    path = Path(manifest_path)
+
+    if not path.is_file():
+        raise FileNotFoundError(
+            f'V3 training manifest missing: {path}'
+        )
+
+    class_to_identity = {}
+    identity_to_class = {}
+
+    with path.open(
+        'r',
+        encoding='utf-8-sig',
+        newline=''
+    ) as stream:
+
+        reader = csv.DictReader(stream)
+
+        required = {
+            'class_id',
+            'identity_key',
+            'dataset_root_id',
+        }
+
+        missing = required - set(
+            reader.fieldnames or ()
+        )
+
+        if missing:
+            raise ValueError(
+                f'V3 training manifest missing columns: '
+                f'{sorted(missing)}'
+            )
+
+        for line_no, row in enumerate(
+            reader,
+            start=2
+        ):
+
+            identity = row['identity_key']
+            domain = row['dataset_root_id']
+
+            if not identity or not domain:
+                raise ValueError(
+                    f'V3 training manifest row {line_no}: '
+                    f'missing identity/domain'
+                )
+
+            try:
+                class_id = int(
+                    row['class_id']
+                )
+
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f'V3 training manifest row {line_no}: '
+                    f'invalid class ID'
+                ) from exc
+
+            if class_id < 0:
+                raise ValueError(
+                    f'V3 training manifest row {line_no}: '
+                    f'negative class ID'
+                )
+
+            old_identity = class_to_identity.setdefault(
+                class_id,
+                identity
+            )
+
+            old_class = identity_to_class.setdefault(
+                identity,
+                class_id
+            )
+
+            if (
+                old_identity != identity
+                or old_class != class_id
+            ):
+                raise ValueError(
+                    f'V3 training manifest row {line_no}: '
+                    f'inconsistent identity/class mapping'
+                )
+
+    n_classes = len(class_to_identity)
+
+    if (
+        not n_classes
+        or set(class_to_identity) != set(range(n_classes))
+    ):
+        raise ValueError(
+            'V3 class IDs must be a nonempty dense range 0..N-1'
+        )
+
+    return n_classes
+
+
+def _apply_v3_class_count(cfg) -> int:
+    """Resolve V3 classifier size before model construction; reject conflicts."""
+
+    count = _v3_num_classes_from_manifest(
+        cfg.REIDFM.V3_TRAIN_MANIFEST
+    )
+
+    configured = int(
+        cfg.MODEL.HEADS.NUM_CLASSES
+    )
+
+    if configured not in (0, count):
+        raise ValueError(
+            f'V3 MODEL.HEADS.NUM_CLASSES={configured} '
+            f'conflicts with {count} Global training classes'
+        )
+
+    cfg.MODEL.HEADS.NUM_CLASSES = count
+
+    return count
+
+
 def setup_cfg(
     config_file: str | Path,
     opts: list[str] | None = None,
@@ -207,7 +337,39 @@ def setup_cfg(
     validate_study: bool = True,
 ):
     cfg = load_cfg(config_file, opts)
-    apply_pool(cfg, pool)
+    if cfg.REIDFM.DATA_FORMAT == "REIDPACK3":
+        if pool is not None:
+            raise ValueError(
+                "--pool is incompatible with REIDPACK3 mode"
+            )
+        if not cfg.REIDFM.V3_TRAIN_MANIFEST:
+            raise ValueError(
+                "REIDFM.V3_TRAIN_MANIFEST is required"
+            )
+        if not cfg.REIDFM.V3_PACK_ROOT:
+            raise ValueError(
+                "REIDFM.V3_PACK_ROOT is required"
+            )
+        if (
+            cfg.REIDFM.STUDY_MODE
+            or cfg.REIDFM.STRICT_SPLIT
+        ) and not cfg.REIDFM.V3_VAL_MANIFEST:
+            raise ValueError(
+                "REIDFM.V3_VAL_MANIFEST is required "
+                "for V3 study validation"
+            )
+        # V3 uses its own authoritative Global manifest.
+        # Do not resolve Pool V2 datasets in this mode.
+        cfg.DATASETS.NAMES = ()
+        cfg.DATASETS.TESTS = ()
+    elif cfg.REIDFM.DATA_FORMAT == "LEGACY":
+        apply_pool(cfg, pool)
+    else:
+        raise ValueError(
+            f"Unsupported DATA_FORMAT: {cfg.REIDFM.DATA_FORMAT}"
+        )
+    if cfg.REIDFM.DATA_FORMAT == "REIDPACK3":
+        _apply_v3_class_count(cfg)
     apply_init_model(cfg, model_key, prepare_weights=prepare_weights)
     if time_budget_h is not None:
         cfg.REIDFM.TIME_BUDGET_H = float(time_budget_h)

@@ -34,7 +34,33 @@ def _comm():
 
 
 def domain_of(pid: str) -> str:
-    return str(pid).split("_", 1)[0]
+    """Read domain from legacy or Global V3 identity keys."""
+    value = str(pid)
+
+    if value.startswith("V3|"):
+        parts = value.split("|", 2)
+        if (
+            len(parts) != 3
+            or not parts[1]
+            or not parts[2].isdigit()
+        ):
+            raise ValueError(
+                f"Malformed V3 identity key: {value!r}"
+            )
+        return parts[1]
+
+    return value.split("_", 1)[0]
+
+
+def v3_identity_key(dataset_root_id: str, class_id: int) -> str:
+    """Build a globally unique training identity key."""
+    domain = str(dataset_root_id)
+    cid = int(class_id)
+
+    if not domain or "|" in domain or cid < 0:
+        raise ValueError("Invalid V3 identity")
+
+    return f"V3|{domain}|{cid}"
 
 
 def domain_weights(

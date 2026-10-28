@@ -14,6 +14,34 @@ import sys
 
 from reidfm.utils.paths import FASTREID_ROOT
 
+
+def _patch_legacy_collections() -> None:
+    """Restore aliases expected by older FastReID imports.
+
+    This modifies only the current Python process.
+    The pinned FastReID source remains unchanged.
+    """
+    import collections
+    import collections.abc
+
+    for name in (
+        "Mapping",
+        "MutableMapping",
+        "Sequence",
+        "MutableSequence",
+        "Set",
+        "MutableSet",
+        "Iterable",
+        "Iterator",
+        "Callable",
+    ):
+        if not hasattr(collections, name):
+            setattr(
+                collections,
+                name,
+                getattr(collections.abc, name),
+            )
+
 _READY = False
 
 
@@ -52,6 +80,7 @@ def ensure_fastreid() -> None:
     global _READY
     if _READY:
         return
+    _patch_legacy_collections()
     _put_fastreid_on_path()
     _patch_checkpoint_loading()
 
