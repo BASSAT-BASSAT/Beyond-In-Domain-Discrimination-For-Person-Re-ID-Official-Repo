@@ -56,6 +56,16 @@ class ReidfmTrainer(DefaultTrainer):
         self._v3_resume_offset = 0
         self._v3_resume_pending = None
         super().__init__(cfg)
+        self._v3_freeze_counter = None
+        if str(getattr(self.cfg.REIDFM, 'DATA_FORMAT', 'LEGACY')) == 'REIDPACK3':
+            freeze_iters = int(self.cfg.SOLVER.FREEZE_ITERS)
+            if freeze_iters > 0:
+                from reidfm.engine.v3_freeze_counter import V3FreezeCounterCheckpointable
+                self._v3_freeze_counter = V3FreezeCounterCheckpointable(
+                    self._trainer.optimizer, freeze_iters)
+                if 'v3_freeze_counter' in self.checkpointer.checkpointables:
+                    raise ValueError('Duplicate V3 freeze checkpointable')
+                self.checkpointer.checkpointables['v3_freeze_counter'] = self._v3_freeze_counter
 
     @classmethod
     def build_optimizer(cls, cfg, model):
@@ -343,6 +353,10 @@ class ReidfmTrainer(DefaultTrainer):
 
     def resume_or_load(self, resume=True):
         checkpoint = self.checkpointer.resume_or_load(self.cfg.MODEL.WEIGHTS, resume=resume)
+        if (resume and self.checkpointer.has_checkpoint()
+                and self._v3_freeze_counter is not None
+                and not self._v3_freeze_counter.restored):
+            raise RuntimeError('V3 resume checkpoint missing persisted freeze counter')
         if resume and self.checkpointer.has_checkpoint():
             v3 = str(getattr(self.cfg.REIDFM, "DATA_FORMAT", "LEGACY")) == "REIDPACK3"
             if v3 and "v3_resume_schema" in checkpoint:
