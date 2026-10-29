@@ -80,6 +80,9 @@ class V3FastReIDTrainDataset(Dataset):
                 str(row.get("raw_camera_or_view", "")),
             ))
 
+        # Required by FastReID DefaultTrainer.auto_scale_hyperparams().
+        # The V3 setup config validates the full Global class mapping.
+        self.num_classes = len({int(row["class_id"]) for row in self.records})
     def __len__(self):
         return self.virtual_len or len(self.records)
 
