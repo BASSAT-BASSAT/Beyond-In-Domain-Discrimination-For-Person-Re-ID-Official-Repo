@@ -7,6 +7,7 @@ Features:
 - Verifies image payload SHA256
 - Resolves Global manifest image paths
 - Does not depend on FastReID
+- Reuses verified on-disk SQLite indices across DataLoader workers on Linux
 
 Important:
 Create a separate reader inside each DataLoader worker.
@@ -22,6 +23,11 @@ import posixpath
 import sqlite3
 import struct
 import tempfile
+
+try:
+    import fcntl
+except ImportError:  # Windows: preserve the original private-index behavior.
+    fcntl = None
 
 
 HEADER = b"REIDPACK3\n"
@@ -83,17 +89,26 @@ class V3PackReader:
                 self.pack_path
             )
 
-        self._tmp = tempfile.TemporaryDirectory(
-            prefix="reid_v3_index_"
-        )
+        self._tmp = None
 
         try:
-            self._index_path = (
-                Path(self._tmp.name) /
-                "index.sqlite"
+            # The PACK index is immutable within a run. Historically every
+            # worker copied and hashed it from the mounted PACK independently.
+            # Share a verified local copy instead; PACK image bytes are still
+            # fetched and SHA256-checked individually on every read.
+            cache_enabled = (
+                fcntl is not None
+                and os.environ.get("REIDFM_V3_INDEX_CACHE", "1") != "0"
             )
-
-            self._verify_and_extract_index()
+            if cache_enabled:
+                self._index_path = self._get_cached_index()
+            else:
+                self._tmp = tempfile.TemporaryDirectory(
+                    prefix="reid_v3_index_"
+                )
+                self._index_path = Path(self._tmp.name) / "index.sqlite"
+                start, size, digest = self._index_metadata()
+                self._extract_index(self._index_path, start, size, digest)
 
             uri = (
                 self._index_path.as_uri() +
@@ -108,24 +123,23 @@ class V3PackReader:
             self.f = self.pack_path.open("rb")
 
         except BaseException:
-            self._tmp.cleanup()
+            if self._tmp is not None:
+                self._tmp.cleanup()
             raise
 
 
-    def _verify_and_extract_index(self):
+    def _index_metadata(self):
 
         with self.pack_path.open("rb") as f:
 
-            assert (
-                f.read(len(HEADER)) == HEADER
-            ), "Invalid PACK header"
+            if f.read(len(HEADER)) != HEADER:
+                raise ValueError("Invalid PACK header")
 
             f.seek(0, os.SEEK_END)
             total = f.tell()
 
-            assert total > (
-                len(HEADER) + FOOTER.size
-            )
+            if total <= len(HEADER) + FOOTER.size:
+                raise ValueError("PACK too small")
 
             f.seek(total - FOOTER.size)
 
@@ -135,22 +149,25 @@ class V3PackReader:
                 )
             )
 
-            assert marker == b"RIDX3END"
-
-            assert start >= len(HEADER)
-
-            assert (
-                start + size ==
-                total - FOOTER.size
-            )
+            if marker != b"RIDX3END":
+                raise ValueError("Invalid PACK index footer")
+            if start < len(HEADER) or size <= 0 or start + size != total - FOOTER.size:
+                raise ValueError("Invalid PACK index bounds")
 
             self._payload_limit = start
+
+            return start, size, digest
+
+
+    def _extract_index(self, destination, start, size, digest):
+        """Copy an index and validate it against the PACK's footer."""
+        with self.pack_path.open("rb") as f:
 
             f.seek(start)
 
             h = hashlib.sha256()
 
-            with self._index_path.open(
+            with destination.open(
                 "wb"
             ) as out:
 
@@ -175,9 +192,66 @@ class V3PackReader:
 
                     remaining -= len(block)
 
-            assert h.digest() == digest, (
-                "PACK index SHA256 mismatch"
-            )
+                out.flush()
+                os.fsync(out.fileno())
+
+            if h.digest() != digest:
+                raise ValueError("PACK index SHA256 mismatch")
+
+
+    @staticmethod
+    def _valid_cached_index(path, size, digest):
+        if not path.is_file() or path.stat().st_size != size:
+            return False
+        h = hashlib.sha256()
+        with path.open("rb") as f:
+            for block in iter(lambda: f.read(4 * 1024 * 1024), b""):
+                h.update(block)
+        return h.digest() == digest
+
+
+    def _get_cached_index(self):
+        start, size, digest = self._index_metadata()
+        pack_stat = self.pack_path.stat()
+        identity = "\0".join((
+            str(self.pack_path.resolve()),
+            str(pack_stat.st_dev),
+            str(pack_stat.st_ino),
+            str(pack_stat.st_size),
+            str(pack_stat.st_mtime_ns),
+            digest.hex(),
+        ))
+        key = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+
+        cache = Path(os.environ.get(
+            "REIDFM_V3_INDEX_CACHE_DIR",
+            str(Path(tempfile.gettempdir()) / "reidfm_v3_indices"),
+        ))
+        cache.mkdir(parents=True, exist_ok=True, mode=0o700)
+        index_path = cache / f"{key}.sqlite"
+        lock_path = cache / f"{key}.lock"
+
+        # A lock per PACK lets distinct domains initialize concurrently while
+        # preventing several workers from extracting the same index at once.
+        with lock_path.open("a+b") as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            try:
+                if not self._valid_cached_index(index_path, size, digest):
+                    # A prior aborted write or corrupt cache is never trusted.
+                    with tempfile.NamedTemporaryFile(
+                        prefix=f"{key}.", suffix=".tmp",
+                        dir=cache, delete=False,
+                    ) as temporary:
+                        pending = Path(temporary.name)
+                    try:
+                        self._extract_index(pending, start, size, digest)
+                        os.replace(pending, index_path)
+                    finally:
+                        pending.unlink(missing_ok=True)
+            finally:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+        return index_path
 
 
     def read_bytes(
@@ -352,7 +426,8 @@ class V3PackReader:
         if hasattr(self, "db"):
             self.db.close()
 
-        self._tmp.cleanup()
+        if self._tmp is not None:
+            self._tmp.cleanup()
 
 
     def __enter__(self):
