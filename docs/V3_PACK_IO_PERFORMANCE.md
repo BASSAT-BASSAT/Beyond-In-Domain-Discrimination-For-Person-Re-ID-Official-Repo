@@ -16,6 +16,24 @@ This is a **candidate fix for repeated index extraction**, not yet a measured
 fix for sustained random-access PACK latency on Kaggle. This code must be
 benchmarked there before a speedup is claimed.
 
+### PRID2011 suffix-path optimization (follow-up)
+
+The Kaggle follow-up sampled 100 PRID2011 images; **100/100 required suffix
+matching**, with a mean of **714.62** and up to **1,134** candidate rows per
+filename. These requests took ~18.14 ms/image in the diagnostic sample.
+
+The reader now builds a bounded, **per-worker reverse-suffix index on demand**
+for basename groups of at most 2,048 rows. It resolves the longest matching
+suffix in a few dictionary lookups rather than scanning hundreds of paths
+per image. Fully normalized requested paths also use a bounded cache of
+resolved offsets/digests. The algorithm preserves exact-path priority,
+longest-suffix ranking and fail-closed ambiguity checks. Each image is still
+read from the PACK and SHA256-checked, even on a metadata-cache hit.
+
+An offline synthetic 715-candidate/103-request benchmark showed ~126.7 ms
+for original suffix scoring vs ~15.6 ms for new *first-time lookup plus file
+read*. This is **not** a Kaggle training throughput measurement.
+
 ## Settings
 
 - Enabled by default on Linux.
@@ -46,16 +64,18 @@ latency (mean, p50, p95), payload-read-plus-hash timing, and SQLite query
 plans. A `SCAN images` plan can explain sustained lookup latency and warrants
 a separate, verified improvement to the lookup/index strategy.
 
-For an apples-to-apples A/B comparison, run the diagnostic once with
-`REIDFM_V3_INDEX_CACHE=0`, then with `REIDFM_V3_INDEX_CACHE=1` in equivalent
-Kaggle conditions. The diagnostic processes a bounded reservoir of images
-from the full training manifest; it does not train the model.
+The first Kaggle three-pass experiment reused the same 20 images per domain
+in the order no-cache/cold-cache/warm-cache. These passes also warmed the
+**OS file cache for the image payloads**. Their 14.02-to-0.83 ms average
+read-time drop cannot be attributed solely to the SQLite index-cache change.
+The diagnostic processes a bounded reservoir from the full training manifest;
+it does not reproduce sustained distributed training I/O.
 
 ## Safety and checkpoint warning
 
 1. The 2-GPU global batch (128), sampler, model, optimizer, loss, training
    transforms, freeze-counter, DDP and model checkpoint logic are unchanged.
-2. All seven local synthetic PACK tests pass via
+2. All nine local synthetic PACK tests pass via
    `python -m unittest discover -s tests -p test_v3_pack_index_cache.py -v`.
 3. Kaggle performance has **not** yet been measured with this code; no
    2.44-steps/second promise can be made yet.

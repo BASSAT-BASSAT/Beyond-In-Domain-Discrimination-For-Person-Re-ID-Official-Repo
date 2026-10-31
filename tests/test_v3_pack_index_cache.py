@@ -54,6 +54,42 @@ def _worker_read(pack_dir):
         return str(reader._index_path), reader.read_bytes(IMAGE_PATH)
 
 
+def _write_duplicate_basename_pack(root: Path, n: int = 715):
+    """PRID-like fixture: hundreds of indexed rows share one filename."""
+    source = root / "source_index.sqlite"
+    conn = sqlite3.connect(source)
+    try:
+        conn.execute(
+            "CREATE TABLE images (physical_path TEXT, context_path TEXT, "
+            "leaf_path TEXT, basename TEXT, offset INTEGER, bytes INTEGER, sha256 TEXT)"
+        )
+        chunks = []
+        cursor = len(HEADER)
+        for i in range(n):
+            payload = f"payload-for-identity-{i:04d}".encode()
+            chunks.append(payload)
+            conn.execute(
+                "INSERT INTO images VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    f"archive/raw_{i:04d}/frame.jpg",
+                    f"dataset/root/person_{i:04d}/frame.jpg",
+                    f"raw_{i:04d}/frame.jpg",
+                    "frame.jpg", cursor, len(payload), sha256(payload).hexdigest(),
+                ),
+            )
+            cursor += len(payload)
+        conn.execute("CREATE INDEX images_basename_idx ON images(basename)")
+        conn.commit()
+    finally:
+        conn.close()
+
+    embedded = source.read_bytes()
+    (root / "PRID2011.pack").write_bytes(
+        HEADER + b"".join(chunks) + embedded
+        + FOOTER.pack(b"RIDX3END", cursor, len(embedded), sha256(embedded).digest())
+    )
+
+
 class V3IndexCacheTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="v3_pack_test_")
@@ -135,6 +171,48 @@ class V3IndexCacheTests(unittest.TestCase):
         self.assertEqual(report["manifest_rows"], 1)
         self.assertEqual(report["domains"]["Sample"]["samples"], 1)
         self.assertIn("physical_path", report["domains"]["Sample"]["query_plans"])
+
+    def test_prid_style_suffix_resolution_parity_and_cache(self):
+        _write_duplicate_basename_pack(self.root)
+        with V3PackReader(self.root, "PRID2011") as reader:
+            paths = [
+                f"root/person_{i:04d}/frame.jpg"
+                for i in (0, 1, 77, 500, 714)
+            ]
+            for i, requested in zip((0, 1, 77, 500, 714), paths):
+                expected = f"payload-for-identity-{i:04d}".encode()
+                self.assertEqual(reader.read_bytes(requested), expected)
+                self.assertEqual(reader.read_bytes(requested), expected)
+
+            self.assertEqual(len(reader._basename_candidates), 1)
+            candidates, suffix_index = reader._basename_candidates["frame.jpg"]
+            self.assertEqual(len(candidates), 715)
+            self.assertTrue(suffix_index)
+            self.assertEqual(len(reader._resolved_paths), len(paths))
+
+            # Exact matching still takes priority over suffix candidates.
+            self.assertEqual(
+                reader.read_bytes("archive/raw_0001/frame.jpg"),
+                b"payload-for-identity-0001",
+            )
+            # Tied best-score candidates must never be resolved arbitrarily.
+            with self.assertRaisesRegex(ValueError, "Ambiguous suffix mapping"):
+                reader.read_bytes("frame.jpg")
+            with self.assertRaises(FileNotFoundError):
+                reader.read_bytes("unrelated.jpg")
+            with self.assertRaisesRegex(ValueError, "Unsafe relative image path"):
+                reader.read_bytes("../frame.jpg")
+
+    def test_large_basename_group_preserves_legacy_fallback(self):
+        _write_duplicate_basename_pack(self.root, n=2050)
+        with V3PackReader(self.root, "PRID2011") as reader:
+            self.assertEqual(
+                reader.read_bytes("root/person_2049/frame.jpg"),
+                b"payload-for-identity-2049",
+            )
+            self.assertFalse(reader._basename_candidates)  # size-limited cache
+            with self.assertRaisesRegex(ValueError, "Ambiguous suffix mapping"):
+                reader.read_bytes("frame.jpg")
 
 
 if __name__ == "__main__":

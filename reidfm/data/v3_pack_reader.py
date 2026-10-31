@@ -8,6 +8,7 @@ Features:
 - Resolves Global manifest image paths
 - Does not depend on FastReID
 - Reuses verified on-disk SQLite indices across DataLoader workers on Linux
+- Caches resolved locations and pre-tokenized suffix candidates per worker
 
 Important:
 Create a separate reader inside each DataLoader worker.
@@ -16,6 +17,7 @@ Create a separate reader inside each DataLoader worker.
 from __future__ import annotations
 
 from pathlib import Path
+from collections import OrderedDict
 
 import hashlib
 import os
@@ -38,6 +40,24 @@ ALIASES = {
     "Occluded-PoseTrack-ReID":
         "Occluded_PoseTrack_ReID",
 }
+
+_RESOLVED_PATH_CACHE_SIZE = 8192
+_BASENAME_CACHE_SIZE = 32
+_SUFFIX_INDEX_CANDIDATE_LIMIT = 2048
+_MISSING_SUFFIX = object()
+
+
+def _reversed_casefold_parts(path: str) -> tuple[str, ...]:
+    return tuple(part.casefold() for part in reversed(path.split("/")) if part)
+
+
+def _suffix_score_parts(a: tuple[str, ...], b: tuple[str, ...]) -> int:
+    matched = 0
+    for left, right in zip(a, b):
+        if left != right:
+            break
+        matched += 1
+    return matched
 
 
 def _suffix_score(a: str, b: str) -> int:
@@ -121,6 +141,10 @@ class V3PackReader:
             )
 
             self.f = self.pack_path.open("rb")
+
+            # Worker-local metadata only: image bytes are never cached here.
+            self._resolved_paths = OrderedDict()
+            self._basename_candidates = OrderedDict()
 
         except BaseException:
             if self._tmp is not None:
@@ -280,6 +304,69 @@ class V3PackReader:
                 "Empty image path"
             )
 
+        location = self._resolved_paths.get(requested)
+        if location is not None:
+            self._resolved_paths.move_to_end(requested)
+        else:
+            location = self._resolve_location(requested)
+            self._resolved_paths[requested] = location
+            if len(self._resolved_paths) > _RESOLVED_PATH_CACHE_SIZE:
+                self._resolved_paths.popitem(last=False)
+
+        # Even cache hits always read and re-hash the original image payload.
+        return self._load(*location)
+
+
+    def _candidates_for_basename(self, basename):
+        cached = self._basename_candidates.get(basename)
+        if cached is not None:
+            self._basename_candidates.move_to_end(basename)
+            return cached
+
+        rows = self.db.execute(
+            """
+            SELECT leaf_path, context_path, offset, bytes, sha256
+            FROM images WHERE basename=?
+            """,
+            (basename,),
+        ).fetchall()
+        prepared = tuple(
+            (
+                _reversed_casefold_parts(leaf),
+                _reversed_casefold_parts(context),
+                offset, size, digest,
+            )
+            for leaf, context, offset, size, digest in rows
+        )
+
+        # Index all distinct reversed suffixes. A suffix maps to exactly one
+        # *row index* or None for ambiguous matches (even identical payload
+        # offsets in two rows must remain ambiguous as in the original code).
+        suffix_index = None
+        if len(prepared) <= _SUFFIX_INDEX_CANDIDATE_LIMIT:
+            suffix_index = {}
+            for row_index, (leaf_parts, context_parts, *_unused) in enumerate(prepared):
+                row_suffixes = {
+                    parts[:depth]
+                    for parts in (leaf_parts, context_parts)
+                    for depth in range(1, len(parts) + 1)
+                }
+                for suffix in row_suffixes:
+                    previous = suffix_index.get(suffix, _MISSING_SUFFIX)
+                    if previous is _MISSING_SUFFIX:
+                        suffix_index[suffix] = row_index
+                    elif previous != row_index:
+                        suffix_index[suffix] = None
+
+            self._basename_candidates[basename] = (prepared, suffix_index)
+            if len(self._basename_candidates) > _BASENAME_CACHE_SIZE:
+                self._basename_candidates.popitem(last=False)
+        return prepared, suffix_index
+
+
+    def _resolve_location(self, requested):
+        """Return (offset, size, sha256), preserving original tie behavior."""
+
         # First, try exact path matching.
         for column in (
             "physical_path",
@@ -297,7 +384,7 @@ class V3PackReader:
             ).fetchall()
 
             if len(rows) == 1:
-                return self._load(*rows[0])
+                return tuple(rows[0])
 
             if len(rows) > 1:
                 raise ValueError(
@@ -310,74 +397,51 @@ class V3PackReader:
             "/", 1
         )[-1]
 
-        matches = self.db.execute(
-            """
-            SELECT
-                leaf_path,
-                context_path,
-                offset,
-                bytes,
-                sha256
-            FROM images
-            WHERE basename=?
-            """,
-            (basename,),
-        ).fetchall()
+        matches, suffix_index = self._candidates_for_basename(basename)
 
         if not matches:
             raise FileNotFoundError(
                 requested
             )
 
-        ranked = []
+        requested_parts = _reversed_casefold_parts(requested)
 
-        for (
-            leaf,
-            context,
-            offset,
-            size,
-            digest,
-        ) in matches:
+        if suffix_index is not None:
+            # Longest matching suffix wins. A suffix present in multiple rows
+            # must raise the original ambiguity error, not pick a random row.
+            for depth in range(len(requested_parts), 0, -1):
+                match = suffix_index.get(requested_parts[:depth], _MISSING_SUFFIX)
+                if match is _MISSING_SUFFIX:
+                    continue
+                if match is None:
+                    raise ValueError("Ambiguous suffix mapping: " + requested)
+                return matches[match][2:]
+            raise ValueError("Ambiguous suffix mapping: " + requested)
 
+        # Very large basename groups retain the bounded-memory legacy path.
+        best = -1
+        winner = None
+        ties = 0
+
+        for leaf_parts, context_parts, offset, size, digest in matches:
             score = max(
-                _suffix_score(
-                    requested, leaf
-                ),
-                _suffix_score(
-                    requested, context
-                ),
+                _suffix_score_parts(requested_parts, leaf_parts),
+                _suffix_score_parts(requested_parts, context_parts),
             )
+            if score > best:
+                best = score
+                winner = (offset, size, digest)
+                ties = 1
+            elif score == best:
+                ties += 1
 
-            ranked.append(
-                (
-                    score,
-                    offset,
-                    size,
-                    digest,
-                )
-            )
-
-        best = max(
-            row[0] for row in ranked
-        )
-
-        winners = [
-            row for row in ranked
-            if row[0] == best
-        ]
-
-        if (
-            len(winners) != 1
-            or best < 1
-        ):
+        if ties != 1 or best < 1:
             raise ValueError(
                 "Ambiguous suffix mapping: "
                 + requested
             )
 
-        return self._load(
-            *winners[0][1:]
-        )
+        return winner
 
 
     def _load(
@@ -419,6 +483,11 @@ class V3PackReader:
 
 
     def close(self):
+
+        if hasattr(self, "_resolved_paths"):
+            self._resolved_paths.clear()
+        if hasattr(self, "_basename_candidates"):
+            self._basename_candidates.clear()
 
         if hasattr(self, "f"):
             self.f.close()
