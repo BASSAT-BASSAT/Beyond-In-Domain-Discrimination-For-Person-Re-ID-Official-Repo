@@ -32,7 +32,7 @@ def test_whitelist_covers_condition_keys():
             assert key in LOSS_STUDY_WHITELIST, f"{cond}: {key}"
 
 
-SPHERE_HPARAMS = dict(alpha=0.7, scale=40.0, margin=0.4, t=3.0, loss_weight=50.0)
+SPHERE_HPARAMS = dict(alpha=0.9, scale=40.0, margin=0.4, t=3.0, loss_weight=50.0)
 
 
 def _opensphere_reference(cos_theta, y, b, *, alpha, scale, margin, t, loss_weight):
@@ -73,7 +73,7 @@ def test_sphereface2_matches_opensphere_reference():
 def test_sphereface2_init_bias_matches_opensphere():
     import math
 
-    c, alpha, r, m, t = 10036, 0.7, 40.0, 0.4, 3.0
+    c, alpha, r, m, t = 10036, 0.9, 40.0, 0.4, 3.0
     z = alpha / ((1.0 - alpha) * (c - 1.0))
     ay = r * (2.0 * 0.5**t - 1.0 - m)
     ai = r * (2.0 * 0.5**t - 1.0 + m)
@@ -105,6 +105,23 @@ def test_sphereface2_grad_reaches_bias_and_ignores_unlabeled():
     assert torch.isfinite(loss)
     assert module.bias.grad is not None and torch.isfinite(module.bias.grad).all()
     assert torch.all(cos.grad[1] == 0)
+
+
+@pytest.mark.fastreid
+def test_sphereface2_conditions_use_paper_lambda():
+    from reidfm.config import setup_cfg
+
+    for cond in ("B6", "B7"):
+        run = expand_loss_study_run(cond, 0)
+        cfg = setup_cfg(
+            run.config_file,
+            opts=run.opts,
+            model_key=run.init_model,
+            output_dir="/tmp/loss_study_test",
+            prepare_weights=False,
+            validate_study=False,
+        )
+        assert float(cfg.MODEL.LOSSES.SPHERE.LAMBDA) == pytest.approx(0.9), cond
 
 
 @pytest.mark.fastreid
