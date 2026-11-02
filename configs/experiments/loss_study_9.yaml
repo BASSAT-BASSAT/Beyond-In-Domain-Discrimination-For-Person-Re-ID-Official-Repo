@@ -17,6 +17,7 @@ conditions:
       MODEL.META_ARCHITECTURE: Baseline
       MODEL.HEADS.NAME: EmbeddingHead
       MODEL.HEADS.CLS_LAYER: Linear
+      MODEL.HEADS.SCALE: 1
       MODEL.LOSSES.NAME: [CrossEntropyLoss]
 
   B1:
@@ -24,6 +25,7 @@ conditions:
       MODEL.META_ARCHITECTURE: Baseline
       MODEL.HEADS.NAME: EmbeddingHead
       MODEL.HEADS.CLS_LAYER: Linear
+      MODEL.HEADS.SCALE: 1
       MODEL.LOSSES.NAME: [CrossEntropyLoss, TripletLoss]
 
   B2:

@@ -22,19 +22,13 @@ class _SubCenterArcSoftmax(nn.Module):
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         # logits: [N, C*K] cosines after linear on normalized features
-        n, ck = logits.shape
-        c = self.num_classes
-        k = self.k
-        logits = logits.view(n, c, k)
-        logits, _ = logits.max(dim=2)
+        n = logits.size(0)
+        cos = logits.float().view(n, self.num_classes, self.k).amax(dim=2)
         index = torch.where(targets != -1)[0]
-        m_hot = torch.zeros(index.size(0), c, device=logits.device, dtype=logits.dtype)
-        m_hot.scatter_(1, targets[index, None], self.m)
-        logits = logits.clone()
-        logits[index].acos_()
-        logits[index] += m_hot
-        logits.cos_().mul_(self.s)
-        return logits.view(n, c)
+        if index.numel():
+            target_cos = cos[index, targets[index]].clamp(-1.0 + 1e-7, 1.0 - 1e-7)
+            cos = cos.index_put((index, targets[index]), torch.cos(torch.acos(target_cos) + self.m))
+        return cos * self.s
 
 
 @REID_HEADS_REGISTRY.register()

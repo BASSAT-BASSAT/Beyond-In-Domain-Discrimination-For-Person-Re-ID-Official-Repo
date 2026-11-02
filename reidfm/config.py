@@ -64,11 +64,14 @@ def add_reidfm_config(cfg) -> None:
     cfg.REIDFM.STRICT_SPLIT = False
     cfg.REIDFM.LOSS_STUDY_CONDITION = ""
     cfg.MODEL.HEADS.NUM_SUBCENTERS = 1
+    # SphereFace2-C defaults from the OpenSphere reference head: radius r, margin m,
+    # positive/negative balance lambda, similarity adjustment t, loss weight lw.
     cfg.MODEL.LOSSES.SPHERE = CN()
-    cfg.MODEL.LOSSES.SPHERE.SCALE = 64.0
-    cfg.MODEL.LOSSES.SPHERE.MARGIN = 0.2
-    cfg.MODEL.LOSSES.SPHERE.LAMBDA = 1.0
-    cfg.MODEL.LOSSES.SPHERE.GAMMA = 1.0
+    cfg.MODEL.LOSSES.SPHERE.SCALE = 40.0
+    cfg.MODEL.LOSSES.SPHERE.MARGIN = 0.4
+    cfg.MODEL.LOSSES.SPHERE.LAMBDA = 0.7
+    cfg.MODEL.LOSSES.SPHERE.T = 3.0
+    cfg.MODEL.LOSSES.SPHERE.LOSS_WEIGHT = 50.0
 
 
 def get_reidfm_cfg():

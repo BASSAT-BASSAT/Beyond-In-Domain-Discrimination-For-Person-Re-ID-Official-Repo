@@ -13,6 +13,7 @@ MODEL:
   HEADS:
     NAME: EmbeddingHead
     CLS_LAYER: Linear
+    SCALE: 1
   LOSSES:
     NAME:
     - CrossEntropyLoss
