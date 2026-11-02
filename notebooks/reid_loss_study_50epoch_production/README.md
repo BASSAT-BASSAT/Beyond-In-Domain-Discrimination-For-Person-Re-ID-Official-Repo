@@ -23,7 +23,7 @@ Each folder contains:
 
 ## Experiment contract
 
-- Research commit: `56923ec3af05abf0c56b9dfe608b9c4b628bdd62`
+- Research commit: `f72357c0122bf16ffa0e179bb46f117b908e569d`
 - FastReID commit: `c9bc3ceb2f7a6438b62fb515ea3df6d1e999e95d`
 - **50 epochs × 2,000 training steps = 100,000 optimizer steps** per notebook
 - **2× T4 GPUs**, DDP, global batch 128
@@ -37,7 +37,7 @@ Each folder contains:
 
 **Hugging Face Storage Bucket**, not GitHub, stores live model checkpoints:
 
-`reid-research-hub/reid-loss-study-live/v3_50epoch_56923ec/<CONDITION>/seed<SEED>/`
+`reid-research-hub/reid-loss-study-live/v3_50epoch_f72357c/<CONDITION>/seed<SEED>/`
 
 Each experiment overwrites its rolling `slot_a.pth`, `slot_b.pth`, and `model_best.pth` there, without creating a Git commit per backup. Do not commit `.pth`, `.pt`, `.ckpt`, datasets, tokens, or generated run outputs into this GitHub folder.
 
