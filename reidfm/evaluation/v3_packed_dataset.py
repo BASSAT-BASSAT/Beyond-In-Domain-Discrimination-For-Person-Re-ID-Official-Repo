@@ -26,9 +26,12 @@ class V3PackedEvalDataset(Dataset):
         "retrieval_role",
     )
 
-    def __init__(self, records, pack_root, size_hw=(384, 128)):
+    def __init__(self, records, pack_root, size_hw=(384, 128), *, reidraw_files=None):
 
         self.records = [dict(row) for row in records]
+        self.reidraw_files = {
+            str(k): Path(v) for k, v in (reidraw_files or {}).items()
+        }
 
         if not self.records:
             raise ValueError("Empty V3 evaluation dataset")
@@ -84,10 +87,18 @@ class V3PackedEvalDataset(Dataset):
 
         if domain not in self._readers:
 
-            self._readers[domain] = V3PackReader(
-                self.pack_root,
-                domain,
-            )
+            pack_file = self.reidraw_files.get(domain)
+            if pack_file is not None:
+                self._readers[domain] = V3PackReader(
+                    self.pack_root,
+                    domain,
+                    pack_file=pack_file,
+                )
+            else:
+                self._readers[domain] = V3PackReader(
+                    self.pack_root,
+                    domain,
+                )
 
         return self._readers[domain]
 

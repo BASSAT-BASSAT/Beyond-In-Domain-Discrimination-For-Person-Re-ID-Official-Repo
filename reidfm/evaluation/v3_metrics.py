@@ -385,6 +385,8 @@ def evaluate_v3_rank_from_features(
         axis=0,
     )
 
+    curve_len = min(20, len(mean_cmc))
+
     return {
         "Rank-1":
             float(mean_cmc[0] * 100.0),
@@ -403,6 +405,8 @@ def evaluate_v3_rank_from_features(
 
         "mINP":
             float(np.mean(inps) * 100.0),
+
+        "cmc": [float(mean_cmc[i] * 100.0) for i in range(curve_len)],
 
         "num_valid_queries":
             float(len(aps)),

@@ -18,6 +18,7 @@ def extract_v3_packed_features(
     batch_size=4,
     num_workers=0,
     device="cpu",
+    reidraw_files=None,
 ):
     if batch_size < 1 or num_workers < 0:
         raise ValueError("Invalid DataLoader settings")
@@ -26,6 +27,7 @@ def extract_v3_packed_features(
         records,
         pack_root,
         size_hw=size_hw,
+        reidraw_files=reidraw_files,
     )
 
     loader = DataLoader(
