@@ -48,7 +48,14 @@ def parse_args() -> argparse.Namespace:
         "--datasets", default=",".join(HELD_OUT_TEST_KEYS),
         help="comma-separated subset of held-out keys",
     )
+    parser.add_argument(
+        "--video-frames", type=int, default=8,
+        help="frames sampled per tracklet for video benchmarks (MARS), mean-pooled per tracklet",
+    )
     return parser.parse_args()
+
+
+VIDEO_TARGETS = frozenset({"mars"})
 
 
 def _result_key_to_battery(key: str) -> str | None:
@@ -167,7 +174,10 @@ def main() -> int:
     for key in datasets:
         records = list(iter_target_records(specs[key], target_root))
         n_query = sum(row.get("retrieval_role") == "query" for row in records)
+        tracklet_frames = args.video_frames if key in VIDEO_TARGETS else 0
         print(f"[{key}] {n_query} query / {len(records) - n_query} gallery images", flush=True)
+        if tracklet_frames:
+            print(f"[{key}] video protocol: tracklets, {tracklet_frames} frames each, mean-pooled", flush=True)
         t0 = time.perf_counter()
         part = evaluate_v3_packed_groups(
             model,
@@ -179,7 +189,12 @@ def main() -> int:
             device=args.device,
             max_rank=args.max_rank,
             reidraw_files=reidraw_map,
+            tracklet_frames=tracklet_frames,
         )
+        if tracklet_frames:
+            for proto_key, metrics in part.items():
+                if proto_key != "mean":
+                    print(f"[{key}] {metrics['num_query']} query / {metrics['num_gallery']} gallery tracklets", flush=True)
         timings[key] = round(time.perf_counter() - t0, 2)
         print(f"[{key}] done in {timings[key]:.1f}s", flush=True)
         raw.update((k, v) for k, v in part.items() if k != "mean")
