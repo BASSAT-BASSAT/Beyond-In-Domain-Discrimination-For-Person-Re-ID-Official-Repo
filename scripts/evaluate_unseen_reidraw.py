@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+import time
 from collections import OrderedDict
 from pathlib import Path
 
@@ -35,6 +36,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--max-rank", type=int, default=50)
+    parser.add_argument(
+        "--num-classes", type=int, default=10036,
+        help="training identities; SphereFace2 heads need the real class count to build",
+    )
+    parser.add_argument(
+        "--datasets", default=",".join(HELD_OUT_TEST_KEYS),
+        help="comma-separated subset of held-out keys",
+    )
     return parser.parse_args()
 
 
@@ -70,43 +79,56 @@ def main() -> int:
     specs = load_target_specs(target_root)
     reidraw_map = reidraw_files_by_root_id(specs)
 
+    datasets = [key.strip() for key in args.datasets.split(",") if key.strip()]
+    unknown = [key for key in datasets if key not in HELD_OUT_TEST_KEYS]
+    if unknown:
+        raise ValueError(f"Unknown held-out keys {unknown}; choose from {list(HELD_OUT_TEST_KEYS)}")
+
     config_file = Path(args.config_file) if args.config_file else checkpoint.parent / "config.yaml"
+    device_opts = ["MODEL.DEVICE", args.device, "MODEL.HEADS.NUM_CLASSES", str(args.num_classes)]
     if args.condition:
         run = expand_loss_study_run(args.condition, args.seed)
         cfg = setup_cfg(
             run.config_file,
-            opts=run.opts + ["MODEL.DEVICE", args.device],
+            opts=run.opts + device_opts,
             model_key=run.init_model,
             output_dir=str(checkpoint.parent),
             prepare_weights=False,
             validate_study=False,
         )
     elif config_file.is_file():
-        cfg = load_cfg(config_file, ["MODEL.DEVICE", args.device])
+        cfg = load_cfg(config_file, device_opts)
     else:
         raise FileNotFoundError(
             f"Missing {config_file}; pass --condition/--seed or place config.yaml next to the checkpoint."
         )
 
+    started = time.perf_counter()
     model, cfg = build_fastreid_model(cfg, checkpoint, args.device)
     size_hw = tuple(int(x) for x in cfg.INPUT.SIZE_TEST)
+    timings = OrderedDict(model_load_s=round(time.perf_counter() - started, 2))
 
-    all_records = []
-    for key in HELD_OUT_TEST_KEYS:
-        spec = specs[key]
-        all_records.extend(iter_target_records(spec, target_root))
-
-    raw = evaluate_v3_packed_groups(
-        model,
-        all_records,
-        target_root,
-        size_hw=size_hw,
-        batch_size=args.batch_size,
-        num_workers=args.workers,
-        device=args.device,
-        max_rank=args.max_rank,
-        reidraw_files=reidraw_map,
-    )
+    raw = OrderedDict()
+    for key in datasets:
+        records = list(iter_target_records(specs[key], target_root))
+        n_query = sum(row.get("retrieval_role") == "query" for row in records)
+        print(f"[{key}] {n_query} query / {len(records) - n_query} gallery images", flush=True)
+        t0 = time.perf_counter()
+        part = evaluate_v3_packed_groups(
+            model,
+            records,
+            target_root,
+            size_hw=size_hw,
+            batch_size=args.batch_size,
+            num_workers=args.workers,
+            device=args.device,
+            max_rank=args.max_rank,
+            reidraw_files=reidraw_map,
+        )
+        timings[key] = round(time.perf_counter() - t0, 2)
+        print(f"[{key}] done in {timings[key]:.1f}s", flush=True)
+        raw.update((k, v) for k, v in part.items() if k != "mean")
+    timings["total_s"] = round(time.perf_counter() - started, 2)
 
     battery_results = OrderedDict()
     for proto_key, metrics in raw.items():
@@ -143,6 +165,8 @@ def main() -> int:
             "target_root": str(target_root),
             "condition": args.condition,
             "seed": args.seed,
+            "datasets": datasets,
+            "timings_s": timings,
             "protocol_results": raw,
             "battery_results": battery_results,
             "paper": paper,
@@ -150,6 +174,7 @@ def main() -> int:
         },
     )
     (out_dir / f"{name}.md").write_text(markdown, encoding="utf-8")
+    print("timings (s): " + ", ".join(f"{k}={v}" for k, v in timings.items()))
     print(f"wrote {out_dir / name}.json and .md")
     return 0
 

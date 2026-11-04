@@ -35,6 +35,16 @@ DEEPCHANGE_PROTOCOL = (
     "deepchange_internal_cross_tracklet_v1"
 )
 
+# Held-out public benchmarks use the standard query/gallery protocol:
+# same identity + same camera is junk, so positives need a different camera.
+OFFICIAL_BENCHMARK_TOKENS = (
+    "market1501",
+    "msmt17",
+    "dukemtmc",
+    "occludedduke",
+    "mars",
+)
+
 
 def protocol_rule(protocol_id: str) -> str:
 
@@ -49,6 +59,12 @@ def protocol_rule(protocol_id: str) -> str:
 
     if protocol_id in CROSS_CONTEXT_PROTOCOLS:
         return "different_camera_context"
+
+    normalized = (
+        protocol_id.lower().replace("-", "").replace("_", "")
+    )
+    if any(token in normalized for token in OFFICIAL_BENCHMARK_TOKENS):
+        return "different_raw_camera"
 
     raise ValueError(
         f"Unsupported V3 validation protocol: {protocol_id!r}"
