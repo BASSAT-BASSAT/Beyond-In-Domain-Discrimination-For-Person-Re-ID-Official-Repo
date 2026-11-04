@@ -50,6 +50,7 @@ def _summarize_rank(all_cmc, all_ap, all_inp) -> dict[str, float]:
     if not all_ap:
         raise RuntimeError("All query identities are missing from the gallery.")
     cmc = np.asarray(all_cmc, dtype=np.float32).sum(axis=0) / float(len(all_ap))
+    curve_len = min(20, len(cmc))
     return {
         "Rank-1": float(cmc[0] * 100.0),
         "Rank-5": float(cmc[min(4, len(cmc) - 1)] * 100.0),
@@ -58,6 +59,7 @@ def _summarize_rank(all_cmc, all_ap, all_inp) -> dict[str, float]:
         "mAP": float(np.mean(all_ap) * 100.0),
         "mINP": float(np.mean(all_inp) * 100.0),
         "num_valid_queries": float(len(all_ap)),
+        "cmc": [float(cmc[i] * 100.0) for i in range(curve_len)],
     }
 
 

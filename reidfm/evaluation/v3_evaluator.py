@@ -85,6 +85,7 @@ def evaluate_v3_packed_groups(
     device="cpu",
     max_rank=50,
     query_chunk=128,
+    reidraw_files=None,
 ) -> OrderedDict:
     """Extract and score all supplied protocol groups with stable role metadata.
 
@@ -98,10 +99,12 @@ def evaluate_v3_packed_groups(
         qf, qr = extract_v3_packed_features(
             model, queries, pack_root, size_hw=size_hw,
             batch_size=batch_size, num_workers=num_workers, device=device,
+            reidraw_files=reidraw_files,
         )
         gf, gr = extract_v3_packed_features(
             model, galleries, pack_root, size_hw=size_hw,
             batch_size=batch_size, num_workers=num_workers, device=device,
+            reidraw_files=reidraw_files,
         )
         if qr != queries or gr != galleries:
             raise RuntimeError(f"Metadata order changed for {dataset} | {proto}")
@@ -112,6 +115,8 @@ def evaluate_v3_packed_groups(
         if key in results:
             raise ValueError(f"Ambiguous V3 protocol result name: {key}")
         result = {name: float(metrics[name]) for name in HEADLINE}
+        if "cmc" in metrics:
+            result["cmc"] = [float(x) for x in metrics["cmc"]]
         result.update({
             "metric": (result["Rank-1"] + result["mAP"]) / 2.0,
             "num_query": int(metrics["num_query"]),

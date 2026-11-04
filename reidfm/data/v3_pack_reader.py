@@ -93,21 +93,28 @@ class V3PackReader:
         self,
         pack_root: str | Path,
         dataset_root_id: str,
+        *,
+        pack_file: str | Path | None = None,
     ):
 
-        name = ALIASES.get(
-            dataset_root_id,
-            dataset_root_id,
-        )
-
-        self.pack_path = (
-            Path(pack_root) / f"{name}.pack"
-        )
-
-        if not self.pack_path.is_file():
-            raise FileNotFoundError(
-                self.pack_path
+        if pack_file is not None:
+            self.pack_path = Path(pack_file)
+            if not self.pack_path.is_file():
+                raise FileNotFoundError(self.pack_path)
+        else:
+            name = ALIASES.get(
+                dataset_root_id,
+                dataset_root_id,
             )
+
+            self.pack_path = (
+                Path(pack_root) / f"{name}.pack"
+            )
+
+            if not self.pack_path.is_file():
+                raise FileNotFoundError(
+                    self.pack_path
+                )
 
         self._tmp = None
 

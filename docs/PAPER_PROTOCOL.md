@@ -30,6 +30,14 @@ python scripts/evaluate.py --checkpoint outputs/<run>/model_best.pth --pool conf
 
 Occluded-Duke: `python scripts/prepare_occluded_duke.py /path/to/DukeMTMC-reID.zip` then `prepare_datasets.py --datasets occludedduke`.
 
+Held-out tables for the paper (R1, R5, mAP, CMC 1–20, macro over five public tests):
+
+```bash
+python scripts/evaluate_paper_battery.py --checkpoint outputs/loss_study/B6/seed0/model_best.pth --name B6_seed0
+```
+
+Kaggle: `notebooks/reid_loss_study_50epoch_production/ReID_Paper_HeldOut_Evaluation.ipynb` (1 GPU).
+
 ## Angular-loss study (main table)
 
 - **Nine conditions** `R0` … `B7` on **SBS R50-IBN**, **ImageNet init only**, `pool_v2` + leakage split.

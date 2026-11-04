@@ -48,6 +48,9 @@ Two extra folders hold the cross-backbone baselines (paper Table "backbone"), se
 
 **GitHub** stores these lightweight `.ipynb` source notebooks and documentation.
 
+**Held-out paper metrics (after training):** use a single GPU notebook  
+`ReID_Paper_HeldOut_Evaluation.ipynb` on Kaggle dataset `a7medlabib/reid-unseen-evaluation-targets-v1` (`.reidraw` targets; TeamRecorded excluded). Downloads `model_best.pth` from the HF bucket automatically.
+
 **Hugging Face Storage Bucket**, not GitHub, stores live model checkpoints:
 
 `reid-research-hub/reid-loss-study-live/v3_50epoch_28c68a1/<CONDITION>/seed<SEED>/`

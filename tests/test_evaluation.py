@@ -18,6 +18,7 @@ def test_perfect_ranking():
     distmat = np.array([[0.0, 1.0, 1.0], [1.0, 0.0, 1.0]], dtype=np.float32)
     m = evaluate_rank(distmat, np.array([1, 2]), np.array([1, 2, 3]), np.array([0, 0]), np.array([1, 1, 1]))
     assert m["Rank-1"] == pytest.approx(100.0) and m["mAP"] == pytest.approx(100.0)
+    assert m["cmc"][0] == pytest.approx(100.0)
 
 
 def test_same_camera_match_is_junk():
