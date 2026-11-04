@@ -19,6 +19,16 @@ LOSS_STUDY_CONDITIONS: tuple[str, ...] = (
 
 PRIMARY_INIT_MODEL = "sbs_r50_ibn_imagenet"
 
+# Cross-backbone comparison: Circle-softmax + Triplet (R0) vs the selected objective.
+BACKBONE_STUDY_CONDITIONS: tuple[str, ...] = (
+    "OSNet_R0",
+    "ConvNeXtS_R0",
+)
+
+IMAGENET_INIT_MODELS: FrozenSet[str] = frozenset(
+    {PRIMARY_INIT_MODEL, "osnet_ain_imagenet", "convnext_s_imagenet"}
+)
+
 HELD_OUT_TEST_KEYS: tuple[str, ...] = (
     "market1501",
     "msmt17",

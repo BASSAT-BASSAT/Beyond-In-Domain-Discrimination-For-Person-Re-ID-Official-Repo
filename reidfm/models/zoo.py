@@ -177,6 +177,34 @@ def _register_imagenet_baselines() -> None:
         )
 
 
+    register_model(
+        ModelSpec(
+            key="osnet_ain_imagenet",
+            label="OSNet-AIN x1.0 (ImageNet init)",
+            family="OSNet",
+            backbone="OSNet-AIN",
+            trained_on="ImageNet",
+            init="imagenet",
+            feat_dim=512,
+            source="imagenet",
+            notes="torchreid ImageNet weights, loaded by build_osnet_ain_backbone (MODEL.BACKBONE.PRETRAIN=True)",
+        )
+    )
+    register_model(
+        ModelSpec(
+            key="convnext_s_imagenet",
+            label="ConvNeXt-S (ImageNet init)",
+            family="ConvNeXt",
+            backbone="ConvNeXt-S",
+            trained_on="ImageNet",
+            init="imagenet",
+            feat_dim=768,
+            source="imagenet",
+            notes="torchvision IMAGENET1K_V1 weights, loaded by build_convnext_backbone (MODEL.BACKBONE.PRETRAIN=True)",
+        )
+    )
+
+
 def _register_trained() -> None:
     if not TRAINED_REGISTRY.is_file():
         return

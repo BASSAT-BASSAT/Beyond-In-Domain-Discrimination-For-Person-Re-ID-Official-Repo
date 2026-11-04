@@ -6,11 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from reidfm.experiments.contract import LOSS_STUDY_CONDITIONS, LOSS_STUDY_WHITELIST, PRIMARY_INIT_MODEL
+from reidfm.experiments.contract import LOSS_STUDY_CONDITIONS, LOSS_STUDY_WHITELIST, PRIMARY_INIT_MODEL  # noqa: F401
 from reidfm.utils.config import load_yaml
 from reidfm.utils.paths import repo_path
 
 _MANIFEST = repo_path("configs/experiments/loss_study_9.yaml")
+BACKBONE_MANIFEST = repo_path("configs/experiments/backbone_study.yaml")
 
 
 @dataclass(frozen=True)
@@ -30,7 +31,7 @@ def load_loss_study_manifest(path: str | Path | None = None) -> dict[str, Any]:
 
 def _condition_opts(manifest: dict[str, Any], condition: str) -> list[str]:
     if condition not in manifest["conditions"]:
-        raise KeyError(f"unknown condition {condition!r}; expected one of {LOSS_STUDY_CONDITIONS}")
+        raise KeyError(f"unknown condition {condition!r}; expected one of {sorted(manifest['conditions'])}")
     entry = manifest["conditions"][condition]
     opts: list[str] = []
     raw = entry.get("opts") or {}
@@ -79,8 +80,10 @@ def expand_loss_study_run(
 ) -> StudyRun:
     manifest = manifest or load_loss_study_manifest()
     base = manifest["base_config"]
-    init_model = manifest.get("init_model", PRIMARY_INIT_MODEL)
     opts = _condition_opts(manifest, condition)
+    init_model = manifest["conditions"][condition].get(
+        "init_model", manifest.get("init_model", PRIMARY_INIT_MODEL)
+    )
     if seed >= 0:
         opts.extend(["REIDFM.SEED", str(seed)])
     out = f"{output_root}/{condition}/seed{seed}"

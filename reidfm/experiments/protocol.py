@@ -7,7 +7,7 @@ from pathlib import Path
 
 from reidfm.data.pool import PoolConfig, load_pool
 from reidfm.data.split_filter import load_train_split
-from reidfm.experiments.contract import HELD_OUT_TEST_KEYS, PRIMARY_INIT_MODEL
+from reidfm.experiments.contract import HELD_OUT_TEST_KEYS, IMAGENET_INIT_MODELS, PRIMARY_INIT_MODEL
 from reidfm.utils.paths import repo_path
 
 
@@ -88,10 +88,10 @@ def validate_v3_study_protocol(
         )
 
     if require_imagenet_init:
-        if cfg.REIDFM.INIT_MODEL != PRIMARY_INIT_MODEL:
+        if cfg.REIDFM.INIT_MODEL not in IMAGENET_INIT_MODELS:
             raise ValueError(
                 "V3 loss study requires ImageNet initialization "
-                f"from {PRIMARY_INIT_MODEL}"
+                f"from one of {sorted(IMAGENET_INIT_MODELS)}"
             )
 
     def resolve_path(value):
