@@ -41,7 +41,7 @@ Two extra folders hold the cross-backbone baselines (paper Table "backbone"), se
 ```
 
 - Same data, schedule, Circle-softmax + Triplet head/loss and evaluation as `R0`; only the backbone and its ImageNet weights change (`configs/experiments/backbone_study.yaml`).
-- Research commit `b69c47a29d323c99ba4fa8fed02870f53f503889`, bucket prefix `v3_50epoch_b69c47a/<CONDITION>/seed<SEED>/`.
+- Research commit `9436a8ac6a2d139339ecc9769658581e08bc966a`, bucket prefix `v3_50epoch_b69c47a/<CONDITION>/seed<SEED>/`.
 - The selected objective (e.g. `OSNet_B7`, `ConvNeXtS_B7`) is added to the manifest once the SBS study settles; its notebooks are generated the same way.
 
 ## Where artifacts belong
