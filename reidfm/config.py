@@ -386,3 +386,25 @@ def setup_cfg(
         )
     cfg.freeze()
     return cfg
+
+
+def setup_eval_cfg(
+    config_file: str | Path,
+    opts: list[str] | None = None,
+    model_key: str | None = None,
+    output_dir: str | None = None,
+    num_classes: int = 10036,
+):
+    """Build a frozen cfg for held-out ``.reidraw`` evaluation only.
+
+    Does not load ``pool_v2.yaml`` or V3 pack paths (often absent on Kaggle eval kernels).
+    """
+    cfg = load_cfg(config_file, opts)
+    cfg.DATASETS.NAMES = ()
+    cfg.DATASETS.TESTS = ()
+    if int(cfg.MODEL.HEADS.NUM_CLASSES) <= 0:
+        cfg.MODEL.HEADS.NUM_CLASSES = int(num_classes)
+    apply_init_model(cfg, model_key, prepare_weights=False)
+    resolve_output_dir(cfg, output_dir)
+    cfg.freeze()
+    return cfg

@@ -61,6 +61,19 @@ def test_env_time_budget_overrides_yaml(monkeypatch):
     assert _cfg([]).REIDFM.TIME_BUDGET_H == 3.5
 
 
+def test_setup_eval_cfg_skips_pool_yaml(monkeypatch):
+    from reidfm.config import setup_eval_cfg
+
+    monkeypatch.delenv("REIDFM_TIME_BUDGET_H", raising=False)
+    cfg = setup_eval_cfg(
+        "configs/scratch_sbs_r50ibn_imagenet.yml",
+        num_classes=10036,
+    )
+    assert cfg.DATASETS.NAMES == ()
+    assert cfg.DATASETS.TESTS == ()
+    assert cfg.MODEL.HEADS.NUM_CLASSES == 10036
+
+
 @pytest.mark.parametrize("config", KAGGLE_CONFIGS)
 def test_kaggle_presets_merge_base(config: str, monkeypatch):
     from reidfm.config import load_cfg

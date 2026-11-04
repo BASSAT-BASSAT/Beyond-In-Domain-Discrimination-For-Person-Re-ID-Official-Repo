@@ -28,7 +28,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--checkpoint", required=True, help="model_best.pth or model_final.pth")
     parser.add_argument("--condition", default="", help="loss-study condition (B6, R0, …) to rebuild cfg")
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--config-file", default=None, help="default: config.yaml beside checkpoint")
+    parser.add_argument(
+        "--config-file",
+        default=None,
+        help="training config.yaml (default: beside checkpoint; else loss-study base if --condition)",
+    )
     parser.add_argument("--target-root", default="", help="folder with *.reidraw + reid_targets_index.json")
     parser.add_argument("--name", default="")
     parser.add_argument("--out", default="results/paper_eval")
@@ -38,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-rank", type=int, default=50)
     parser.add_argument(
         "--num-classes", type=int, default=10036,
-        help="training identities; SphereFace2 heads need the real class count to build",
+        help="training identities; SphereFace2 / angular heads need the real class count",
     )
     parser.add_argument(
         "--datasets", default=",".join(HELD_OUT_TEST_KEYS),
@@ -60,11 +64,42 @@ def _result_key_to_battery(key: str) -> str | None:
     return aliases.get(dataset)
 
 
+def _resolve_eval_config(args, checkpoint: Path):
+    """Pick config path + opts without requiring pool_v2.yaml on disk."""
+    from reidfm.utils.paths import repo_path
+
+    explicit = Path(args.config_file) if args.config_file else None
+    ckpt_cfg = checkpoint.parent / "config.yaml"
+    opts: list[str] = ["MODEL.DEVICE", args.device, "MODEL.HEADS.NUM_CLASSES", str(args.num_classes)]
+    model_key = None
+    config_file: Path | None = None
+
+    if args.condition:
+        run = expand_loss_study_run(args.condition, args.seed)
+        opts = run.opts + opts
+        model_key = run.init_model
+        if explicit and explicit.is_file():
+            config_file = explicit
+        elif ckpt_cfg.is_file():
+            config_file = ckpt_cfg
+        else:
+            config_file = repo_path(run.config_file)
+    elif explicit and explicit.is_file():
+        config_file = explicit
+    elif ckpt_cfg.is_file():
+        config_file = ckpt_cfg
+    else:
+        raise FileNotFoundError(
+            f"Missing config beside checkpoint ({ckpt_cfg}); pass --condition/--seed or --config-file."
+        )
+    return config_file, opts, model_key
+
+
 def main() -> int:
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     ensure_fastreid()
-    from reidfm.config import load_cfg, setup_cfg
+    from reidfm.config import setup_eval_cfg
     from reidfm.evaluation.paper_report import build_paper_payload, format_paper_markdown
     from reidfm.evaluation.v3_evaluator import evaluate_v3_packed_groups
     from reidfm.evaluation.extractors import build_fastreid_model
@@ -84,24 +119,14 @@ def main() -> int:
     if unknown:
         raise ValueError(f"Unknown held-out keys {unknown}; choose from {list(HELD_OUT_TEST_KEYS)}")
 
-    config_file = Path(args.config_file) if args.config_file else checkpoint.parent / "config.yaml"
-    device_opts = ["MODEL.DEVICE", args.device, "MODEL.HEADS.NUM_CLASSES", str(args.num_classes)]
-    if args.condition:
-        run = expand_loss_study_run(args.condition, args.seed)
-        cfg = setup_cfg(
-            run.config_file,
-            opts=run.opts + device_opts,
-            model_key=run.init_model,
-            output_dir=str(checkpoint.parent),
-            prepare_weights=False,
-            validate_study=False,
-        )
-    elif config_file.is_file():
-        cfg = load_cfg(config_file, device_opts)
-    else:
-        raise FileNotFoundError(
-            f"Missing {config_file}; pass --condition/--seed or place config.yaml next to the checkpoint."
-        )
+    config_file, opts, model_key = _resolve_eval_config(args, checkpoint)
+    cfg = setup_eval_cfg(
+        config_file,
+        opts=opts,
+        model_key=model_key,
+        output_dir=str(checkpoint.parent),
+        num_classes=args.num_classes,
+    )
 
     started = time.perf_counter()
     model, cfg = build_fastreid_model(cfg, checkpoint, args.device)
