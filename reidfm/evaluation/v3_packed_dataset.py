@@ -89,11 +89,20 @@ class V3PackedEvalDataset(Dataset):
 
             pack_file = self.reidraw_files.get(domain)
             if pack_file is not None:
-                self._readers[domain] = V3PackReader(
-                    self.pack_root,
-                    domain,
-                    pack_file=pack_file,
-                )
+                from reidfm.data.raw_archive_mirror import RawArchiveImageReader
+                from reidfm.data.v3_pack_reader import HEADER as REIDPACK3_HEADER
+
+                pack_path = Path(pack_file)
+                with pack_path.open("rb") as probe:
+                    is_pack = probe.read(len(REIDPACK3_HEADER)) == REIDPACK3_HEADER
+                if is_pack:
+                    self._readers[domain] = V3PackReader(
+                        self.pack_root,
+                        domain,
+                        pack_file=pack_file,
+                    )
+                else:
+                    self._readers[domain] = RawArchiveImageReader(pack_path)
             else:
                 self._readers[domain] = V3PackReader(
                     self.pack_root,

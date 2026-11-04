@@ -1,8 +1,12 @@
 """Read official query/gallery rows from Kaggle ``*.reidraw`` evaluation archives.
 
 The unseen-target bundle ships ``reid_target_reader.py`` beside the ``.reidraw`` files.
-When present, we delegate to that module (authoritative). Otherwise we read the embedded
-SQLite manifest inside REIDPACK3-style ``.reidraw`` containers.
+When present, we delegate to that module (authoritative).
+
+Kaggle targets use ``REID_RAW_ARCHIVE_MIRROR_V1``: renamed official zip/tar files, not
+REIDPACK3. We read embedded ``validation_manifest.csv`` (or rebuild query/gallery rows
+from the official layout) via :mod:`reidfm.data.raw_archive_mirror`. REIDPACK3 footers are
+only used when the file header is ``REIDPACK3``.
 """
 
 from __future__ import annotations
@@ -64,26 +68,68 @@ def normalize_eval_row(row: Mapping, *, dataset: str, dataset_root_id: str) -> d
 
 
 def _load_bundle_module(bundle_root: Path):
+    import sys
+
     script = bundle_root / "reid_target_reader.py"
     if not script.is_file():
         return None
-    spec = importlib.util.spec_from_file_location("reid_bundle_target_reader", script)
-    if spec is None or spec.loader is None:
-        return None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    bundle_root = Path(bundle_root).resolve()
+    path_token = str(bundle_root)
+    inserted = False
+    if sys.path[:1] != [path_token]:
+        sys.path.insert(0, path_token)
+        inserted = True
+    try:
+        spec = importlib.util.spec_from_file_location("reid_target_reader", script)
+        if spec is None or spec.loader is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        if inserted and sys.path[:1] == [path_token]:
+            sys.path.pop(0)
 
 
-def _call_bundle_reader(module, reidraw_path: Path, dataset: str, dataset_root_id: str) -> list[dict] | None:
+def _call_bundle_reader(
+    module,
+    reidraw_path: Path,
+    dataset: str,
+    dataset_root_id: str,
+    *,
+    bundle_root: Path | None = None,
+    index_path: Path | None = None,
+) -> list[dict] | None:
     reidraw_path = Path(reidraw_path)
+    reidraw_str = str(reidraw_path)
+    bundle_root = Path(bundle_root) if bundle_root else None
+    common = {
+        "reidraw_path": reidraw_path,
+        "path": reidraw_path,
+        "archive_path": reidraw_path,
+        "reidraw": reidraw_path,
+        "reidraw_file": reidraw_path,
+        "dataset": dataset,
+        "dataset_name": dataset,
+        "dataset_root_id": dataset_root_id,
+        "root_id": dataset_root_id,
+        "bundle_root": bundle_root,
+        "target_root": bundle_root,
+        "targets_root": bundle_root,
+        "index_path": index_path,
+        "reid_targets_index": index_path,
+    }
     attempts = (
-        ("iter_eval_manifest_rows", {"reidraw_path": reidraw_path, "dataset": dataset}),
-        ("iter_eval_rows", {"reidraw_path": reidraw_path, "dataset": dataset}),
-        ("iter_eval_records", {"reidraw_path": reidraw_path, "dataset": dataset}),
-        ("load_eval_manifest_rows", {"reidraw_path": reidraw_path, "dataset": dataset}),
-        ("load_eval_manifest_rows", {"reidraw_path": reidraw_path}),
-        ("iter_manifest_rows", {"reidraw_path": reidraw_path}),
+        ("iter_eval_manifest_rows", common),
+        ("iter_eval_rows", common),
+        ("iter_eval_records", common),
+        ("iter_target_eval_rows", common),
+        ("load_eval_manifest_rows", common),
+        ("load_eval_rows", common),
+        ("read_eval_manifest_rows", common),
+        ("read_eval_rows", common),
+        ("iter_manifest_rows", common),
+        ("get_eval_rows", common),
     )
     for name, kwargs in attempts:
         func = getattr(module, name, None)
@@ -94,7 +140,15 @@ def _call_bundle_reader(module, reidraw_path: Path, dataset: str, dataset_root_i
         try:
             result = func(**filtered)
         except TypeError:
-            continue
+            try:
+                result = func(reidraw_str, dataset)
+            except TypeError:
+                try:
+                    result = func(reidraw_path)
+                except (TypeError, ValueError):
+                    continue
+            except ValueError:
+                continue
         if isinstance(result, Mapping):
             for key in ("records", "rows", "manifest"):
                 if isinstance(result.get(key), list):
@@ -127,6 +181,35 @@ def _call_bundle_reader(module, reidraw_path: Path, dataset: str, dataset_root_i
                     ]
                     if rows:
                         return rows
+    for name in sorted(dir(module)):
+        if name.startswith("_"):
+            continue
+        if name in {item[0] for item in attempts}:
+            continue
+        func = getattr(module, name, None)
+        if not callable(func):
+            continue
+        lowered = name.lower()
+        if "eval" not in lowered and "manifest" not in lowered and "target" not in lowered:
+            continue
+        try:
+            filtered = {k: v for k, v in common.items() if k in inspect.signature(func).parameters}
+            result = func(**filtered)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(result, Mapping):
+            for key in ("records", "rows", "manifest"):
+                if isinstance(result.get(key), list):
+                    result = result[key]
+                    break
+        if not hasattr(result, "__iter__") or isinstance(result, (str, bytes)):
+            continue
+        rows = [
+            normalize_eval_row(dict(row), dataset=dataset, dataset_root_id=dataset_root_id)
+            for row in result
+        ]
+        if rows:
+            return rows
     return None
 
 
@@ -212,16 +295,52 @@ def iter_eval_rows(
     dataset_root_id: str,
 ) -> Iterator[dict]:
     """Yield normalized V3 eval rows for one ``.reidraw`` target."""
+    from reidfm.data.raw_archive_mirror import detect_archive_kind, iter_eval_rows_from_raw_mirror
+
     reidraw_path = Path(reidraw_path)
+    index_path = None
+    if bundle_root is not None:
+        candidate = Path(bundle_root) / "reid_targets_index.json"
+        if candidate.is_file():
+            index_path = candidate
     if bundle_root is not None:
         module = _load_bundle_module(Path(bundle_root))
         if module is not None:
-            rows = _call_bundle_reader(module, reidraw_path, dataset, dataset_root_id)
+            rows = _call_bundle_reader(
+                module,
+                reidraw_path,
+                dataset,
+                dataset_root_id,
+                bundle_root=Path(bundle_root),
+                index_path=index_path,
+            )
             if rows:
                 for row in rows:
                     if row["retrieval_role"] in ("query", "gallery"):
                         yield row
                 return
+    try:
+        kind = detect_archive_kind(reidraw_path)
+    except ValueError as error:
+        raise ValueError(
+            f"{reidraw_path.name}: cannot read eval rows (bundle reader failed and archive is not "
+            f"REIDPACK3 / zip / tar). Attach the Kaggle target bundle or update reidfm."
+        ) from error
+    if kind != "reidpack3":
+        yielded = False
+        for row in iter_eval_rows_from_raw_mirror(
+            reidraw_path,
+            dataset=dataset,
+            dataset_root_id=dataset_root_id,
+        ):
+            yielded = True
+            yield row
+        if yielded:
+            return
+        raise ValueError(
+            f"{reidraw_path.name}: no query/gallery manifest inside mirror archive and "
+            f"layout fallback produced no eval rows"
+        )
     yield from iter_eval_rows_from_reidraw_index(
         reidraw_path,
         dataset=dataset,

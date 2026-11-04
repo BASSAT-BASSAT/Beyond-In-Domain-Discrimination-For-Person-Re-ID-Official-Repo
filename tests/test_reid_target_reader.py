@@ -53,7 +53,8 @@ def test_iter_target_records_uses_bundle_reader(tmp_path: Path):
         },
     ]
     for stem in ("MSMT17_V2", "MARS", "DukeMTMC", "OccludedDukeMTMC"):
-        (root / f"{stem}_manifest.json").write_text(json.dumps(rows), encoding="utf-8")
+        (root / f"{stem}.reidraw").write_bytes(b"x")
+    (root / "TeamRecorded_manifest.json").write_text(json.dumps(rows), encoding="utf-8")
     (root / "reid_target_reader.py").write_text(
         "def iter_eval_manifest_rows(reidraw_path, dataset=None):\n"
         "    return " + repr(rows) + "\n",

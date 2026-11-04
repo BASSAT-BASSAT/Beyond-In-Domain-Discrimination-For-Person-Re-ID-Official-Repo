@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from reidfm.data.unseen_targets import load_target_specs, _skip_target
+from reidfm.data.unseen_targets import DEFAULT_REIDRAW_FILES, load_target_specs, _skip_target, iter_target_records
 
 
 def test_skip_teamrecorded():
@@ -25,21 +25,18 @@ def test_load_target_specs_from_index(tmp_path: Path):
     (root / "DukeMTMC.reidraw").write_bytes(b"x")
     (root / "OccludedDukeMTMC.reidraw").write_bytes(b"x")
     (root / "TeamRecorded.reidraw").write_bytes(b"x")
-    manifest = {
-        "sample_uid": "a",
-        "dataset": "Market1501",
-        "dataset_root_id": "Market1501",
-        "relative_path": "img.jpg",
-        "identity_key": "1",
-        "validation_protocol_id": "market1501_official_v1",
-        "retrieval_role": "query",
-    }
-    (root / "Market1501_manifest.json").write_text(json.dumps([manifest]), encoding="utf-8")
-    for stem in ("MSMT17_V2", "MARS", "DukeMTMC", "OccludedDukeMTMC"):
-        row = dict(manifest)
-        row["dataset_root_id"] = stem
-        row["dataset"] = stem
-        (root / f"{stem}_manifest.json").write_text(json.dumps([row]), encoding="utf-8")
+    (root / "TeamRecorded_manifest.json").write_text("[]", encoding="utf-8")
+    (root / "reid_target_reader.py").write_text(
+        "def iter_eval_manifest_rows(reidraw_path, dataset=None):\n"
+        "    return [{'sample_uid':'a','dataset':'Market1501','dataset_root_id':'Market1501',"
+        "'relative_path':'img.jpg','identity_key':'1',"
+        "'validation_protocol_id':'market1501_official_v1','retrieval_role':'query',"
+        "'raw_camera_or_view':'1'},{'sample_uid':'b','dataset':'Market1501',"
+        "'dataset_root_id':'Market1501','relative_path':'g.jpg','identity_key':'1',"
+        "'validation_protocol_id':'market1501_official_v1','retrieval_role':'gallery',"
+        "'raw_camera_or_view':'2'}]\n",
+        encoding="utf-8",
+    )
     (root / "reid_targets_index.json").write_text(
         json.dumps(
             {
@@ -55,3 +52,32 @@ def test_load_target_specs_from_index(tmp_path: Path):
     assert "market1501" in specs
     assert "teamrecorded" not in specs
     assert len(specs) == 5
+
+
+def test_teamrecorded_manifest_never_loaded(tmp_path: Path):
+    root = tmp_path / "bundle"
+    root.mkdir()
+    for name in DEFAULT_REIDRAW_FILES.values():
+        (root / name).write_bytes(b"x")
+    (root / "TeamRecorded.reidraw").write_bytes(b"x")
+    (root / "TeamRecorded_manifest.json").write_text(
+        json.dumps([{"sample_uid": "bad", "retrieval_role": "query"}]),
+        encoding="utf-8",
+    )
+    (root / "reid_target_reader.py").write_text(
+        "def iter_eval_manifest_rows(reidraw_path, dataset=None):\n"
+        "    return [{'sample_uid':'q','dataset':dataset or 'Market1501',"
+        "'dataset_root_id':dataset or 'Market1501','relative_path':'q.jpg',"
+        "'identity_key':'1','validation_protocol_id':'market1501_official_v1',"
+        "'retrieval_role':'query','raw_camera_or_view':'1'},"
+        "{'sample_uid':'g','dataset':dataset or 'Market1501',"
+        "'dataset_root_id':dataset or 'Market1501','relative_path':'g.jpg',"
+        "'identity_key':'1','validation_protocol_id':'market1501_official_v1',"
+        "'retrieval_role':'gallery','raw_camera_or_view':'2'}]\n",
+        encoding="utf-8",
+    )
+    (root / "reid_targets_index.json").write_text("{}", encoding="utf-8")
+    specs = load_target_specs(root)
+    rows = list(iter_target_records(specs["market1501"], root))
+    assert len(rows) == 2
+    assert all("TeamRecorded" not in r.get("sample_uid", "") for r in rows)

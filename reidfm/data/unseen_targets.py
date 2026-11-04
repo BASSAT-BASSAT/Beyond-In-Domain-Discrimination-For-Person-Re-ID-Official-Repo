@@ -1,4 +1,8 @@
-"""Kaggle unseen-target bundle (``.reidraw`` + ``reid_targets_index.json``)."""
+"""Kaggle unseen-target bundle (``.reidraw`` + ``reid_targets_index.json``).
+
+Paper held-out evaluation uses **five public benchmarks only**. ``TeamRecorded`` (and
+``TeamRecorded_manifest.json``) are never loaded or evaluated.
+"""
 
 from __future__ import annotations
 
@@ -88,7 +92,11 @@ def _coerce_spec(raw: Mapping, root: Path) -> dict | None:
         return None
     reidraw_path = root / str(reidraw)
     manifest = raw.get("manifest") or raw.get("manifest_file") or raw.get("manifest_path")
-    manifest_path = root / str(manifest) if manifest else None
+    manifest_path = None
+    if manifest:
+        candidate = root / str(manifest)
+        if candidate.is_file() and not _skip_target(candidate.stem):
+            manifest_path = candidate
     return {
         "key": _normalize_key(name),
         "reidraw_path": reidraw_path,
@@ -170,7 +178,7 @@ def _manifest_for_spec(spec: dict, root: Path) -> Path:
         f"{spec['dataset_root_id']}_manifest.csv",
     ):
         path = root / pattern
-        if path.is_file():
+        if path.is_file() and not _skip_target(path.stem):
             return path
     raise FileNotFoundError(
         f"No query/gallery manifest for target {key!r} under {root}. "
@@ -208,25 +216,23 @@ def _rows_from_manifest(path: Path) -> list[dict]:
 
 
 def iter_target_records(spec: dict, root: Path) -> Iterator[dict]:
-    try:
-        manifest = _manifest_for_spec(spec, root)
-    except FileNotFoundError:
-        from reidfm.data.reid_target_reader import iter_eval_rows
-
-        if not spec["reidraw_path"].is_file():
-            raise FileNotFoundError(f"Missing reidraw archive: {spec['reidraw_path']}") from None
-        dataset = spec.get("index_dataset") or spec["dataset_root_id"]
-        yield from iter_eval_rows(
-            spec["reidraw_path"],
-            bundle_root=root,
-            dataset=dataset,
-            dataset_root_id=spec["dataset_root_id"],
+    if _skip_target(spec["key"]) or _skip_target(str(spec.get("dataset_root_id", ""))):
+        raise ValueError(
+            f"{spec['key']!r} is excluded from paper held-out evaluation (TeamRecorded not used)"
         )
-        return
-    for row in _rows_from_manifest(manifest):
-        if row.get("retrieval_role") not in ("query", "gallery"):
-            continue
-        yield dict(row)
+    from reidfm.data.reid_target_reader import iter_eval_rows
+
+    if not spec["reidraw_path"].is_file():
+        raise FileNotFoundError(f"Missing reidraw archive: {spec['reidraw_path']}")
+    dataset = spec.get("index_dataset") or spec["dataset_root_id"]
+    for row in iter_eval_rows(
+        spec["reidraw_path"],
+        bundle_root=root,
+        dataset=dataset,
+        dataset_root_id=spec["dataset_root_id"],
+    ):
+        if row.get("retrieval_role") in ("query", "gallery"):
+            yield row
 
 
 def reidraw_files_by_root_id(specs: dict[str, dict]) -> dict[str, Path]:
