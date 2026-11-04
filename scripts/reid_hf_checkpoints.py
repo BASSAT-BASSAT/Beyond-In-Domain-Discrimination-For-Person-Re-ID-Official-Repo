@@ -15,9 +15,13 @@ import tempfile
 import time
 from pathlib import Path
 
+from reidfm.experiments.contract import BACKBONE_STUDY_CONDITIONS, LOSS_STUDY_CONDITIONS
+
 
 SCHEMA = 1
 VALID_NAMES = {"model_mid.pth", "model_last.pth", "model_final.pth"}
+
+ALLOWED_CHECKPOINT_CONDITIONS = frozenset((*LOSS_STUDY_CONDITIONS, *BACKBONE_STUDY_CONDITIONS))
 
 
 def digest(path: Path) -> str:
@@ -105,8 +109,11 @@ class HuggingFaceCheckpointStore:
                  session_tag: str | None = None, api=None):
         if not token:
             raise ValueError("HF_TOKEN is empty. Enable it in Kaggle Secrets.")
-        if condition not in ("R0", *(f"B{i}" for i in range(8))):
-            raise ValueError("Unknown loss-study condition")
+        if condition not in ALLOWED_CHECKPOINT_CONDITIONS:
+            raise ValueError(
+                f"Unknown study condition {condition!r}; "
+                f"expected one of {sorted(ALLOWED_CHECKPOINT_CONDITIONS)}"
+            )
         if seed not in (0, 1, 2):
             raise ValueError("Unknown seed")
         if not repo_id.startswith("reid-research-hub/"):
