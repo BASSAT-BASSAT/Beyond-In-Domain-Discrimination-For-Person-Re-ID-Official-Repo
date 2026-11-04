@@ -31,6 +31,19 @@ Each folder contains:
 - Requires Kaggle input dataset `a7medlabib/reid-fine-tunning-datasets-v3`
 - Kaggle Secrets: `GITHUB_TOKEN` (private source repo access) and `HF_TOKEN` (private Bucket write access)
 
+## Cross-backbone notebooks (OSNet-AIN, ConvNeXt-S)
+
+Two extra folders hold the cross-backbone baselines (paper Table "backbone"), seed 0 only:
+
+```text
+├── OSNet_R0/      ReID_OSNet_R0_Seed0_50Epoch_Production.ipynb      (OSNet-AIN x1.0, ImageNet init)
+└── ConvNeXtS_R0/  ReID_ConvNeXtS_R0_Seed0_50Epoch_Production.ipynb  (ConvNeXt-S, ImageNet init)
+```
+
+- Same data, schedule, Circle-softmax + Triplet head/loss and evaluation as `R0`; only the backbone and its ImageNet weights change (`configs/experiments/backbone_study.yaml`).
+- Research commit `b69c47a29d323c99ba4fa8fed02870f53f503889`, bucket prefix `v3_50epoch_b69c47a/<CONDITION>/seed0/`.
+- The selected objective (e.g. `OSNet_B7`, `ConvNeXtS_B7`) is added to the manifest once the SBS study settles; its notebooks are generated the same way.
+
 ## Where artifacts belong
 
 **GitHub** stores these lightweight `.ipynb` source notebooks and documentation.
