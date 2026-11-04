@@ -2,7 +2,7 @@
 # evaluation as the SBS loss study; only the backbone and its ImageNet init change.
 # Add the selected objective (e.g. OSNet_B7 / ConvNeXtS_B7) once the SBS study settles.
 base_config: configs/scratch_sbs_r50ibn_imagenet.yml
-seeds: [0]
+seeds: [0, 1, 2]
 
 conditions:
   OSNet_R0:
