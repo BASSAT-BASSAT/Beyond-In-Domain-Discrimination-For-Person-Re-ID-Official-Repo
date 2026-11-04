@@ -18,6 +18,14 @@ DEFAULT_REIDRAW_FILES: dict[str, str] = {
     "occludedduke": "OccludedDukeMTMC.reidraw",
 }
 
+DATASET_ROOT_ID_BY_KEY: dict[str, str] = {
+    "market1501": "Market1501",
+    "msmt17": "MSMT17_V2",
+    "mars": "MARS",
+    "dukemtmc": "DukeMTMC",
+    "occludedduke": "OccludedDukeMTMC",
+}
+
 SKIP_TARGET_TOKENS = ("teamrecorded", "team_recorded")
 
 
@@ -85,7 +93,8 @@ def _coerce_spec(raw: Mapping, root: Path) -> dict | None:
         "key": _normalize_key(name),
         "reidraw_path": reidraw_path,
         "manifest_path": manifest_path,
-        "dataset_root_id": str(raw.get("dataset_root_id") or raw.get("root_id") or name),
+        "dataset_root_id": str(raw.get("dataset_root_id") or raw.get("root_id") or raw.get("dataset") or name),
+        "index_dataset": str(raw.get("dataset") or name),
     }
 
 
@@ -133,7 +142,8 @@ def load_target_specs(root: Path) -> dict[str, dict]:
                 "key": key,
                 "reidraw_path": path,
                 "manifest_path": None,
-                "dataset_root_id": key,
+                "dataset_root_id": DATASET_ROOT_ID_BY_KEY.get(key, key),
+                "index_dataset": DATASET_ROOT_ID_BY_KEY.get(key, key),
             }
 
     missing = [k for k in HELD_OUT_TEST_KEYS if k not in specs]
@@ -198,7 +208,21 @@ def _rows_from_manifest(path: Path) -> list[dict]:
 
 
 def iter_target_records(spec: dict, root: Path) -> Iterator[dict]:
-    manifest = _manifest_for_spec(spec, root)
+    try:
+        manifest = _manifest_for_spec(spec, root)
+    except FileNotFoundError:
+        from reidfm.data.reid_target_reader import iter_eval_rows
+
+        if not spec["reidraw_path"].is_file():
+            raise FileNotFoundError(f"Missing reidraw archive: {spec['reidraw_path']}") from None
+        dataset = spec.get("index_dataset") or spec["dataset_root_id"]
+        yield from iter_eval_rows(
+            spec["reidraw_path"],
+            bundle_root=root,
+            dataset=dataset,
+            dataset_root_id=spec["dataset_root_id"],
+        )
+        return
     for row in _rows_from_manifest(manifest):
         if row.get("retrieval_role") not in ("query", "gallery"):
             continue
