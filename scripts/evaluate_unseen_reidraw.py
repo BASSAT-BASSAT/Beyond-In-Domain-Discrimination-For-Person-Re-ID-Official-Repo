@@ -95,11 +95,41 @@ def _resolve_eval_config(args, checkpoint: Path):
     return config_file, opts, model_key
 
 
+def setup_eval_cfg_for_heldout(
+    config_file,
+    opts=None,
+    model_key=None,
+    output_dir=None,
+    num_classes=10036,
+):
+    """Eval-only cfg: never loads ``pool_v2.yaml`` (works on old clones without ``setup_eval_cfg`` in config)."""
+    import reidfm.config as config_mod
+
+    if hasattr(config_mod, "setup_eval_cfg"):
+        return config_mod.setup_eval_cfg(
+            config_file,
+            opts=opts,
+            model_key=model_key,
+            output_dir=output_dir,
+            num_classes=num_classes,
+        )
+    from reidfm.config import apply_init_model, load_cfg, resolve_output_dir
+
+    cfg = load_cfg(config_file, opts)
+    cfg.DATASETS.NAMES = ()
+    cfg.DATASETS.TESTS = ()
+    if int(cfg.MODEL.HEADS.NUM_CLASSES) <= 0:
+        cfg.MODEL.HEADS.NUM_CLASSES = int(num_classes)
+    apply_init_model(cfg, model_key, prepare_weights=False)
+    resolve_output_dir(cfg, output_dir)
+    cfg.freeze()
+    return cfg
+
+
 def main() -> int:
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     ensure_fastreid()
-    from reidfm.config import setup_eval_cfg
     from reidfm.evaluation.paper_report import build_paper_payload, format_paper_markdown
     from reidfm.evaluation.v3_evaluator import evaluate_v3_packed_groups
     from reidfm.evaluation.extractors import build_fastreid_model
@@ -120,7 +150,7 @@ def main() -> int:
         raise ValueError(f"Unknown held-out keys {unknown}; choose from {list(HELD_OUT_TEST_KEYS)}")
 
     config_file, opts, model_key = _resolve_eval_config(args, checkpoint)
-    cfg = setup_eval_cfg(
+    cfg = setup_eval_cfg_for_heldout(
         config_file,
         opts=opts,
         model_key=model_key,
