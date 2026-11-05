@@ -9,22 +9,24 @@
 
 \newcommand{\todo}[1]{\textbf{[TODO: #1]}}
 \newcommand{\TBD}{\textbf{TBD}}
+\newcommand{\mstd}[2]{#1{\scriptsize$\pm$#2}}
 
 \begin{document}
 
-\title{Which Identity-Learning Objective Generalizes Best? A Multi-Source Study of Person Re-Identification}
+\title{Beyond In-Domain Discrimination: A Multi-Source Study of Identity-Learning Objectives for Cross-Domain Person Re-Identification}
 \titlerunning{Identity-Learning Objectives for Person Re-ID}
 
 \author{Ahmed Labib\inst{1}\textsuperscript{*}\textsuperscript{\ensuremath{\dagger}}\,\orcidlink{0009-0002-6835-4422} \and
 Mohamed ElBassat\inst{1}\textsuperscript{*}\textsuperscript{\ensuremath{\dagger}}\,\orcidlink{0009-0006-3917-1319} \and
 Mohamed Ehab\inst{1}\textsuperscript{\ensuremath{\dagger}}\,\orcidlink{0009-0001-0507-8099} \and
 Rokayya Aly\inst{1}\,\orcidlink{0009-0001-6002-283X} \and
-Yara Hossam\inst{1} \and
 Ahmed Temraz\inst{1}\,\orcidlink{0009-0001-1632-2704} \and
 Malak Alaaeldin\inst{1}\,\orcidlink{0009-0003-2737-4045} \and
-Omar Nabil\inst{1} \and
+Omar Nabil\inst{1}\,\orcidlink{0009-0003-7528-0131} \and
+Yara Hossam\inst{1}\,\orcidlink{0009-0001-7838-1072} \and
 Ola Omara\inst{1}\,\orcidlink{0009-0007-3602-875X} \and
-Jana Wael\inst{1}\,\orcidlink{0009-0002-5751-4144}}
+Jana Wael\inst{1}\,\orcidlink{0009-0002-5751-4144} \and
+Mahmoud Gamal\inst{1}}
 
 \authorrunning{A. Labib et al.}
 
@@ -35,191 +37,185 @@ Jana Wael\inst{1}\,\orcidlink{0009-0002-5751-4144}}
 \maketitle
 
 \begin{abstract}
-Person re-identification (Re-ID) models are often developed and evaluated within a single benchmark family, so their performance on familiar datasets may not predict transfer to a new camera network. Multi-source training broadens capture conditions but also exposes models to source-dependent annotation quality and substantial within-identity variation. We ask whether the identity-learning objective alone, with the architecture held fixed, affects generalization to unseen domains. Using the FastReID Strong Baseline with a ResNet-50-IBN backbone, we train on nine curated Re-ID datasets comprising 782,064 images and 10,036 identities. We compare nine configurations based on linear softmax, ArcFace, Sub-center ArcFace, SphereFace2, and the Circle-softmax default: four heads without triplet loss and all five heads with it, with Circle-softmax included only in the latter group. Each configuration is trained with three random seeds and evaluated on five unseen public benchmarks and a pilot surveillance-style campus set from Alexandria University, excluded from training, validation, and model selection. Since the identity classifier is discarded at inference, all configurations share the same deployment architecture and inference cost. \todo{State the headline findings: best objective, gain over the default relative to seed variation, and performance on Alexandria.}
+Person re-identification (Re-ID) models are often developed and evaluated within a single benchmark family, so their performance on familiar datasets may not predict transfer to a new camera network. Multi-source training broadens capture conditions but also exposes models to source-dependent annotation quality and substantial within-identity variation. We ask whether the identity-learning objective affects generalization to unseen domains. Using the FastReID Strong Baseline with a ResNet-50-IBN backbone, we first compare eight candidate configurations: four identity-learning heads (linear softmax, ArcFace, Sub-center ArcFace, and SphereFace2), each trained with and without triplet loss. Each configuration is trained with three random seeds and evaluated on four unseen public benchmarks and a pilot surveillance-style campus set from Alexandria University. We then compare the candidate selected by internal validation against the FastReID Circle-softmax-plus-triplet default across the Strong Baseline, OSNet, and ConvNeXt-S. Because the identity classifier is discarded at inference, changing the objective adds no classification-head inference cost within a backbone; the cross-backbone comparison assesses architecture-dependent tradeoffs. \todo{Report the selected candidate, its gains over the FastReID default, seed variation, and Alexandria performance.}
 \end{abstract}
 
 \keywords{Person re-identification \and Identity-learning objectives \and Domain generalization \and Multi-source training \and Angular-margin losses}
 
 %==============================================================================
+
+
 \section{Introduction}
 \label{sec:intro}
 
-Person re-identification (Re-ID) aims to retrieve images of the same individual across non-overlapping camera views. The task is difficult because appearance varies with viewpoint, illumination, occlusion, resolution, and clothing, while galleries are large and annotations can be noisy. Deep embeddings replaced hand-crafted descriptors~\cite{li2014deepreid,ye2021deep}, and convolutional pipelines with batch-normalization necks established efficient and reproducible baselines~\cite{luo2019bag,sun2018beyond,song2020strong}. Compact designs such as OSNet target constrained hardware~\cite{zhou2022learning}. More recently, transformer and vision-language models such as TransReID~\cite{he2021transreid}, CLIP-ReID~\cite{li2023clip}, and SOLIDER~\cite{chen2023beyond} have advanced benchmark accuracy, generally relying on larger models and pretraining resources. Efficient convolutional pipelines such as FastReID~\cite{he2023fastreid} therefore remain useful when compute or pretraining data are limited.
+Person re-identification (Re-ID) aims to retrieve images of the same individual across non-overlapping camera views. Despite advances in deep representation learning, the task remains challenging due to variations in viewpoint, illumination, occlusion, resolution, and clothing. Convolutional architectures have established effective and reproducible Re-ID baselines through learned identity representations and metric-learning objectives \cite{luo2019bag,sun2018beyond,song2020strong}. Compact designs such as OSNet further demonstrate their relevance to resource-constrained applications \cite{zhou2022learning}. Although Transformer-based and vision-language approaches have advanced benchmark performance \cite{he2021transreid,li2023clip,chen2023beyond}, CNN-based pipelines remain attractive when computational resources and model complexity are practical constraints.
 
-Two issues limit what benchmark results tell us about deployment. First, models are commonly evaluated within the benchmark family used for development, so strong in-domain scores do not guarantee reliable behavior on an unseen camera network~\cite{zhou2021mix,song2020domain,lee2025domain}. Second, the identity-learning objective---the mechanism that shapes the embedding space---is often fixed or changed together with the architecture, obscuring its individual contribution.
+An important challenge in deploying Re-ID systems is generalization to camera environments not represented during training. Differences in acquisition conditions and appearance distributions can cause substantial domain shifts, making strong in-domain performance an unreliable indicator of performance on unseen camera networks \cite{jin2020snr,zhou2021mix,zhao2021m3l,lee2025domain}. Multi-source training can improve exposure to diverse conditions, but combining heterogeneous datasets also introduces differences in annotation quality, sampling distributions, and within-identity appearance variation, particularly in datasets containing clothing changes, occlusion, and video-derived observations \cite{shu2022last,xu2023deepchange}.
 
-This question is especially relevant to multi-source training. Combining datasets broadens capture conditions, but also brings source-dependent annotation quality and within-identity variation, including clothing changes in LaST~\cite{shu2022last} and DeepChange~\cite{xu2023deepchange}, occlusion, and noisy video tracklets. Objectives impose different assumptions on the identity classes: a single-center angular margin may be sensitive to atypical samples, whereas Sub-center ArcFace explicitly allows multiple centers~\cite{deng2020subcenter}; SphereFace2 uses an independent binary-classification formulation motivated by open-set recognition~\cite{wen2022sphereface2}; and Circle-softmax applies adaptive logit weighting~\cite{sun2020circle,song2020strong}. Whether these differences yield better out-of-domain retrieval under heterogeneous training is not established by in-domain benchmark scores alone.
+Beyond the training data and feature extractor, the identity-learning objective determines how the embedding space is structured. Classification objectives encourage identity discrimination, while metric-learning objectives such as triplet loss constrain relative distances between samples \cite{hermans2017triplet}. Alternative classification heads introduce different assumptions about class separation and intra-class variation, including angular margins, multiple class centers, and independent binary classification \cite{deng2019arcface,deng2020subcenter,wen2022sphereface2}. However, the relative behavior of these objectives under heterogeneous multi-source training and evaluation across unseen domains remains insufficiently characterized. This motivates a controlled investigation in which objective selection is examined independently of the feature-extraction architecture.
 
-We ask which objective performs best on unseen domains; whether triplet loss helps consistently across the evaluated heads; whether objective rankings remain stable across still images, tracklets, occlusion-heavy data, and the independent Alexandria campus set; and whether observed trends align with the heads' assumptions about noisy or multi-modal identity classes. The last question is addressed qualitatively, not through a controlled label-noise ablation.
-
-The identity classifier is discarded at test time, so any retrieval gain from a different training objective comes without an added inference cost; only training behavior changes.
+Accordingly, we first compare eight objective configurations using the FastReID Strong Baseline (SBS): four identity-learning heads, each evaluated with and without triplet loss, under a common training protocol and across three random seeds. The FastReID Circle-softmax-plus-triplet default is excluded from this loss sweep. After selecting the strongest candidate using composite internal validation, we compare it with that default across the SBS, OSNet, and ConvNeXt-S. Evaluation uses held-out Re-ID benchmarks and an independently collected pilot dataset from Alexandria University. Since the identity-classification head is discarded during retrieval inference, changing the training objective adds no classification-head computations at inference.
 
 \paragraph{Contributions.}
-This work provides (i) a controlled comparison of nine objective configurations on one fixed Re-ID model, repeated over three seeds; (ii) a unified description of the heads, their logits, and their class assumptions; (iii) a harmonized nine-source training protocol with composite internal validation and held-out test sets; and (iv) a pilot surveillance-style test set collected at Alexandria University.
+This work contributes a controlled, three-seed comparison of eight identity-learning objective configurations, covering four heads with and without triplet supervision under heterogeneous multi-source training. It also compares the candidate selected from this loss sweep with the FastReID Circle-softmax-plus-triplet default across the FastReID Strong Baseline, OSNet, and ConvNeXt-S. In addition, the study establishes a harmonized nine-source Re-ID training protocol with common metadata representation, domain-balanced sampling, composite internal validation, and held-out evaluation, and reports an independent pilot evaluation on surveillance-style Re-ID data collected at Alexandria University.
+
 
 %==============================================================================
+
 \section{Related Work}
 \label{sec:related}
 
-\paragraph{Re-ID backbones and large models.}
-Convolutional baselines combine strong backbones with batch-normalization necks, label smoothing, and carefully designed training schedules~\cite{luo2019bag,sun2018beyond,song2020strong}. FastReID packages reproducible Re-ID components in a common toolbox~\cite{he2023fastreid}, while OSNet targets compact deployment through omni-scale feature learning~\cite{zhou2022learning}. Transformer, vision-language, and self-supervised approaches, including TransReID, CLIP-ReID, and SOLIDER, expand the use of attention and large-scale pretraining~\cite{he2021transreid,li2023clip,chen2023beyond}. Our study is complementary: rather than scaling or replacing the backbone, it isolates the training objective on a fixed convolutional baseline.
-
-\paragraph{Domain-generalizable Re-ID.}
-Domain generalization for Re-ID seeks models that transfer to unseen camera networks without target-domain training. Prior approaches explore style mixing, domain-invariant or meta-learned representations, and multi-source protocols~\cite{zhou2021mix,song2020domain,lee2025domain}. We focus on a different factor: the identity-learning objective, evaluated while the backbone and training budget remain fixed. \todo{Expand the comparison with the closest domain-generalizable Re-ID studies and clarify their source-data protocols.}
+\paragraph{Domain-generalizable person re-identification.}
+Domain generalization in person Re-ID aims to learn identity representations from labeled source domains that remain effective on unseen camera networks without target-domain data. Prior approaches address this challenge through style normalization, feature-statistics mixing, and multi-source training strategies. Style Normalization and Restitution (SNR) suppresses style variations through instance normalization while restoring identity-relevant information~\cite{jin2020snr}; MixStyle mixes feature statistics across training samples to synthesize style variation~\cite{zhou2021mix}; and Memory-based Multi-Source Meta-Learning (M$^3$L) simulates unseen-domain shifts with meta-learning, a memory-based identification loss, and meta-batch normalization~\cite{zhao2021m3l}. Lee et al.'s 2025 survey reviews these and related domain-generalization strategies~\cite{lee2025domain}. Whereas these methods modify representations or training procedures, our work isolates the identity-learning objective under a shared multi-source protocol.
 
 \paragraph{Identity-learning objectives.}
-Re-ID commonly combines softmax identity classification~\cite{luo2019bag} with triplet metric learning~\cite{hermans2017triplet}. Angular-margin methods such as SphereFace and ArcFace shape normalized features on a hypersphere~\cite{liu2017sphereface,deng2019arcface}; Sub-center ArcFace accommodates multiple centers per identity and was proposed for noisy labels~\cite{deng2020subcenter}. SphereFace2 uses independent binary classifiers and is motivated by open-set recognition~\cite{wen2022sphereface2}. Circle Loss provides adaptive weighting of pair similarities~\cite{sun2020circle}, and Circle-softmax is used as a classification head in the Strong Baseline~\cite{song2020strong}. We compare these objective families under the same heterogeneous training protocol and held-out evaluation.
+Person Re-ID commonly employs identity classification and metric-learning objectives, either independently or jointly. Triplet loss encourages relative distance separation between samples of the same and different identities \cite{hermans2017triplet}. Angular-margin approaches, including SphereFace and ArcFace, introduce geometric constraints to improve inter-class discrimination \cite{liu2017sphereface,deng2019arcface}. Sub-center ArcFace extends this formulation by representing each identity with multiple centers, providing greater flexibility for intra-class variation and noisy labels \cite{deng2020subcenter}. SphereFace2 adopts an independent binary-classification formulation motivated by open-set recognition \cite{wen2022sphereface2}, whereas Circle-based objectives adapt the weighting of similarity relationships during optimization \cite{sun2020circle,song2020strong}. Recent work has also examined alternative loss combinations for cross-domain Re-ID. AATransID, for instance, evaluates combinations of ArcFace, Circle, CosFace, and additive-margin softmax with triplet supervision, reporting its strongest results with ArcFace and triplet loss \cite{yildiz2026aatransid}. Unlike this Transformer-based approach, our study compares a broader set of objective configurations within a common CNN-based training framework and evaluates their behavior across multiple held-out domains.
 
-\paragraph{Multi-source training.}
-Merging Re-ID sources requires harmonizing identity labels, metadata, and sampling across datasets with different sizes and capture conditions. Our training pipeline addresses these practical issues through a common metadata schema and domain-balanced sampling, as detailed in Section~\ref{sec:train-curation}.
+\paragraph{Convolutional architectures for person Re-ID.}
+Convolutional architectures remain an established foundation for practical person Re-ID. Strong baselines combine classification supervision, metric learning, and batch-normalization necks to produce discriminative retrieval embeddings \cite{luo2019bag,sun2018beyond,song2020strong}. FastReID provides a unified framework for implementing and evaluating these components \cite{he2023fastreid}, while OSNet introduces omni-scale feature learning to capture discriminative information at different spatial scales with an efficient architecture \cite{zhou2022learning}. Transformer-based alternatives, including TransReID and CLIP-ReID, have further expanded the architectural landscape through attention-based and vision-language representations \cite{he2021transreid,li2023clip}. Rather than introducing a new feature extractor, our work uses the FastReID Strong Baseline for the primary objective comparison and subsequently evaluates the selected formulation on OSNet and ConvNeXt-S to examine its transfer across different CNN architectures.
 
 %==============================================================================
+
 
 \section{Datasets}
 \label{sec:data}
 
-Three distinct data roles are maintained throughout this work: multi-source training data that we assembled and cleaned, unseen public benchmarks used unchanged for testing, and a campus dataset collected at Alexandria University and used exclusively for testing. Figure~\ref{fig:framework} summarizes the overall pipeline.
+Three data partitions are used in this study: nine heterogeneous sources assembled for training and validation, and four public benchmarks reserved exclusively for unseen-domain evaluation. The overall experimental pipeline is illustrated in Fig.~\ref{fig:framework}.
 
 \begin{figure}[t]
 \centering
 \fbox{\parbox{0.92\textwidth}{\centering\vspace{1.8em}
 \textbf{Figure 1 (placeholder).}\\
-Multi-source training $\rightarrow$ shared Strong Baseline model $\rightarrow$ nine objective configurations $\rightarrow$ unseen public benchmarks and Alexandria campus testing.
+Multi-source training $\rightarrow$ eight candidate loss configurations on the Strong Baseline $\rightarrow$ validation-based candidate selection $\rightarrow$ comparison with the FastReID default across the Strong Baseline, OSNet, and ConvNeXt-S $\rightarrow$ unseen public benchmarks.
 \vspace{1.8em}}}
 \caption{Overview of the experimental framework.}
 \label{fig:framework}
 \end{figure}
 
-\subsection{Training Data}
+\subsection{Multi-Source Training Data}
 \label{sec:train-sources}
 
-The training data are drawn from nine publicly released or access-restricted Re-ID datasets, selected to cover a range of occlusion levels, clothing changes, and acquisition settings (Table~\ref{tab:train}). These are CUHK03-NP~\cite{li2014deepreid,zhong2017reranking}, LaST~\cite{shu2022last}, Occluded-PoseTrack-ReID~\cite{somers2024kpr}, DeepChange~\cite{xu2023deepchange}, LPW~\cite{su2016deep}, ORBench RGB~\cite{zuo2025reid5o}, PRID2011~\cite{hirzer2011person}, RPIfield~\cite{zheng2018rpifield}, and IUST PersonReID~\cite{moghaddam2025iust}. Both still-image and video-derived tracklet sources are represented. Market-1501, MSMT17~\cite{wei2018person}, MARS~\cite{zheng2016mars}, and DukeMTMC~\cite{zheng2017unlabeled} are deliberately excluded so that they remain unseen at test time.
+Training data comprise nine Re-ID datasets selected to represent diverse acquisition conditions, including occlusion, clothing changes, and multi-camera video observations. Their respective image counts are summarized in Table~\ref{tab:train}. Together, the curated sources contain 782,064 images and 10,036 identities. The four public evaluation benchmarks are excluded from training and model selection.
 
 \begin{table}[t]
-\caption{Training data after curation (nine sources, merged global protocol).}
-\label{tab:train}
 \centering
-\small
-\begin{tabular}{@{}p{3.8cm} r p{5.7cm}@{}}
+\caption{Composition of the multi-source training dataset.}
+\label{tab:train}
+\begin{tabular}{l r}
 \toprule
-Source & Train images & Acquisition notes \\
+\textbf{Dataset} & \textbf{Images} \\
 \midrule
-CUHK03-NP~\cite{li2014deepreid,zhong2017reranking} & 5,892 & Detected pairs; two local views \\
-LaST~\cite{shu2022last} & 71,248 & Long-term surveillance; clothing change \\
-Occ-PoseTrack-ReID~\cite{somers2024kpr} & 14,266 & Occlusion-focused poses \\
-DeepChange~\cite{xu2023deepchange} & 60,916 & Clothes-change video tracklets \\
-LPW~\cite{su2016deep} & 338,952 & Multi-view outdoor video \\
-ORBench RGB~\cite{zuo2025reid5o} & 21,564 & Multi-origin RGB training split \\
-PRID2011~\cite{hirzer2011person} & 31,690 & Multi-shot PRID train subset \\
-RPIfield~\cite{zheng2018rpifield} & 179,996 & Multi-camera outdoor; dense frames \\
-IUST PersonReID~\cite{moghaddam2025iust} & 57,540 & Campus-style restricted release \\
+CUHK03-NP~\cite{li2014deepreid,zhong2017reranking} & 5,892 \\
+LaST~\cite{shu2022last} & 71,248 \\
+Occluded-PoseTrack-ReID~\cite{somers2024kpr} & 14,266 \\
+DeepChange~\cite{xu2023deepchange} & 60,916 \\
+LPW~\cite{su2016deep} & 338,952 \\
+ORBench RGB~\cite{zuo2025reid5o} & 21,564 \\
+PRID2011~\cite{hirzer2011person} & 31,690 \\
+RPIfield~\cite{zheng2018rpifield} & 179,996 \\
+IUST PersonReID~\cite{moghaddam2025iust} & 57,540 \\
 \midrule
-\textbf{Total (9 sources)} & \textbf{782,064} & \textbf{10,036 global train identities} \\
+\textbf{Total} & \textbf{782,064} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Cleaning and Harmonization}
+\subsection{Data Harmonization and Partitioning}
 \label{sec:train-curation}
 
-The nine releases differ in folder layout, identity naming, camera metadata, and image quality, and therefore cannot be merged directly. Each source was first audited individually with respect to its layout, identity definition, camera information, and annotation conventions \todo{add counts of corrupted, duplicate, or unlabeled images found per source}. Candidate images were then filtered, and a small set of documented hard exclusions was applied where a source contained unusable or inconsistent entries \todo{state exclusion criteria and the number of images and identities removed per source}. Every source was subsequently converted to a unified metadata schema with consistent sample identifiers, identity keys, and camera fields, so that a single loader can read all of them.
+The source datasets differ in directory structure, identity conventions, camera metadata, and annotation formats. Each source was audited and converted into a common metadata schema with consistent sample identifiers, identity keys, and camera fields.
+Identity labels were remapped into a global index space containing 10,036 identities, with identity spaces kept separate across source datasets. Each source was partitioned into training and validation identities, using an approximately 80/20 split where applicable and respecting source-specific release protocols. Validation identities were excluded from optimization and reserved for checkpoint selection (Section~\ref{sec:training}). To reduce domination by larger sources, particularly video-derived datasets, domain-balanced sampling was used during training, with source weights proportional to the square root of their identity counts. (needs more explanation)
 
-Each source was partitioned into training and validation identities during harmonization (approximately an 80/20 identity split at the merge stage, with source-specific rules where the release defines them). Only training identities appear in the optimization loop; validation identities are reserved for the protocol in Section~\ref{sec:validation}. Global class indices were assigned contiguously over 10{,}036 identities, with no person shared across sources. Because source size varies by two orders of magnitude, training minibatches are drawn with domain-balanced sampling that weights each dataset by the square root of its identity count, so that high-frame video corpora do not overwhelm low-count benchmarks.
 
-
-\subsection{Unseen Public Test Benchmarks}
+\subsection{Unseen Public Benchmarks}
 \label{sec:public-test}
 
-Generalization is measured on five public benchmarks that never appear in training: Market-1501~\cite{zheng2015scalable}, MSMT17~\cite{wei2018person}, MARS~\cite{zheng2016mars}, DukeMTMC-reID~\cite{zheng2017unlabeled}, and Occluded-Duke~\cite{miao2019occluded}. The official query and gallery definitions are used, including the MARS tracklet protocol, and none of these sets is re-annotated or redefined. Together they cover still images, video tracklets, large-scale multi-camera settings, and occlusion (Table~\ref{tab:public}). Market-1501 and MARS share acquisition history, and Occluded-Duke is derived from DukeMTMC; all are reported, and these relationships are disclosed. The availability of DukeMTMC depends on licensing.
+Cross-domain retrieval is evaluated on four public benchmarks excluded from training and model selection: Market-1501~\cite{zheng2015scalable}, MSMT17~\cite{wei2018person}, DukeMTMC-reID~\cite{zheng2017unlabeled}, and Occluded-Duke~\cite{miao2019occluded}. These benchmarks cover different evaluation conditions, from conventional still-image retrieval to large-scale multi-camera and occlusion-heavy scenarios. Their query and gallery sizes are summarized in Table~\ref{tab:public}.
 
 \begin{table}[t]
-\caption{Unseen public benchmarks (evaluation only). Standard protocol sizes; to be verified against each release.}
+\centering
+\caption{Query and gallery sizes of the unseen public evaluation benchmarks.}
 \label{tab:public}
-\centering
-\small
-\begin{tabular}{@{}l r r p{5cm}@{}}
+\begin{tabular}{l r r}
 \toprule
-Benchmark & Query & Gallery & Notes \\
+\textbf{Dataset} & \textbf{Query} & \textbf{Gallery} \\
 \midrule
-Market-1501 & 3,368 & 19,732 & Single-query protocol \\
-MSMT17 & 11,659 & 82,161 & Large-scale test split \\
-MARS & 1,986 & 20,478 & Video tracklet test \\
-DukeMTMC-reID & 2,228 & 17,661 & Test split \\
-Occluded-Duke & 2,210 & 17,661 & Occlusion benchmark \\
+Market-1501~\cite{zheng2015scalable} & 3,368 & 19,732 \\
+MSMT17~\cite{wei2018person} & 11,659 & 82,161 \\
+DukeMTMC-reID~\cite{zheng2017unlabeled} & 2,228 & 17,661 \\
+Occluded-Duke~\cite{miao2019occluded} & 2,210 & 17,661 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Alexandria University Campus Dataset}
-\label{sec:alex}
-
-Public benchmarks are valuable but represent specific countries, camera networks, and capture conditions. To test whether models transfer to a genuinely new environment, we collected an independent dataset at the Faculty of Computers and Data Science (FCDS), Alexandria University, Egypt. Two smartphone cameras were placed at different campus locations, including areas around lecture halls. Rather than taking person-centric photographs, the phones were positioned to imitate fixed surveillance cameras, with an approximately $45^\circ$ viewing angle onto pedestrian areas. Camera positions were changed across recording sessions, which introduces variation in placement, viewing geometry, background, and pedestrian orientation while preserving the stationary, surveillance-style character of the footage. All clips were sampled at 10 frames per second. The recorded population consists mainly of university students, together with faculty members, professors, teaching assistants, and administrative staff, so the data reflect everyday pedestrian traffic rather than a single academic group.
-
-The current annotation corpus contains 42 video clips with an aggregate duration of about 469 seconds (7.8 minutes). Annotators drew 6,498 person bounding boxes across 2,416 labeled frames, yielding 111 annotated track instances (Table~\ref{tab:alex}). Identity labels are assigned within each clip (for example \texttt{person\_1}), so the 111 track instances must not be interpreted as 111 distinct individuals.
-
-\begin{table}[t]
-\caption{Composition of the Alexandria campus annotation corpus.}
-\label{tab:alex}
-\centering
-\small
-\begin{tabular}{@{}lr@{}}
-\toprule
-Statistic & Value \\
-\midrule
-Smartphone cameras used & 2 \\
-Unique annotated video clips & 42 \\
-Aggregate recorded duration & $\approx$469 s \\
-Sampling frequency & 10 fps \\
-Annotated person-track instances & 111 \\
-Manual person bounding boxes & 6,498 \\
-Labeled sample frames & 2,416 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The Alexandria data are used exclusively for testing: their images, annotations, and identities are excluded from training, validation, checkpoint selection, and hyperparameter tuning. Query and gallery sets are constructed to be image-disjoint while preserving identity overlap, such that every query has at least one matching gallery instance and no query image appears in the gallery. Because identities are clip-local, cross-clip and cross-camera correspondences must be established before a global retrieval protocol can be finalized \todo{describe how cross-clip identity correspondences were established and give final query and gallery counts}. Results on this dataset are reported separately from those on the standardized public benchmarks. As the data depict people recorded on campus, collection and use follow institutional requirements and data-protection procedures \todo{state the approval or authorization, consent or notice arrangements, access restrictions, and storage and sharing safeguards}.
-
-\subsection{Evaluation Metrics}
-\label{sec:metrics}
-
-We report mean average precision (mAP) and the cumulative matching characteristic (CMC) using the standard single-gallery rules of each benchmark. The CMC is summarized by Rank-1 and Rank-5 accuracy, which give the probability that a correct match appears among the top one and top five retrieved gallery images, and is additionally plotted as full CMC curves up to rank 20 for selected models. Features are L2-normalized and ranked by cosine similarity, and no re-ranking is applied. The same metrics and fixed query and gallery roles are used on the Alexandria dataset.
+Occluded-Duke is derived from DukeMTMC; this relationship is acknowledged when interpreting results.
 
 %==============================================================================
+
 \section{Methodology}
 \label{sec:method}
 
-\subsection{Base Model}
-We adopt the FastReID Strong Baseline (SBS)~\cite{he2023fastreid,song2020strong} as the primary, fixed model. It combines a ResNet-50 backbone with instance-batch normalization (IBN)~\cite{pan2018two}, generalized-mean (GeM) pooling, and a batch-normalization neck, producing a 2048-dimensional embedding. This model was selected because it is efficient, well documented, and widely reproduced, which makes it a clean platform for isolating the effect of the loss. The input resolution is $384{\times}128$ for both training and testing, and the architecture, resolution, optimizer, and data protocol are kept identical across all runs of this model. Training was implemented in PyTorch on top of the FastReID code base, extended with our own multi-source data loader and the domain-balanced sampler described in Section~\ref{sec:train-curation}.
+\subsection{Model Architecture}
+\label{sec:architecture}
+
+This work compares three existing convolutional architectures rather than introducing a new model. The primary eight-objective loss sweep uses the FastReID Strong Baseline (SBS)~\cite{he2023fastreid,song2020strong}. FastReID serves as the implementation framework, while the SBS combines a ResNet-50 backbone with instance-batch normalization (IBN)~\cite{pan2018two}, generalized-mean (GeM) pooling, and a batch-normalization neck to produce a 2048-dimensional embedding. The cross-backbone comparison additionally includes OSNet~\cite{zhou2022learning} and ConvNeXt-S~\cite{liu2022convnet}. It compares the FastReID Circle-softmax-plus-triplet default against the candidate selected from the eight-configuration loss sweep. All architectures use the same multi-source training data, input resolution, optimization schedule, and evaluation protocols. Training is implemented in PyTorch using the FastReID codebase, extended with our multi-source data loader and domain-balanced sampler (Section~\ref{sec:train-curation}).
 
 \subsection{Training Setup}
 \label{sec:training}
+The primary SBS loss sweep evaluates eight candidate configurations that differ in identity-learning objective and triplet supervision (Section~\ref{sec:objectives}). Each architecture is initialized using its corresponding ImageNet-pretrained weights. We use Adam with a base learning rate of $3.5\times10^{-4}$ and weight decay of $5\times10^{-4}$. Cross-entropy-based heads use label smoothing with $\epsilon=0.1$, while configurations incorporating triplet loss use hard mining with a zero margin.
 
-All experiments share the same optimization schedule and differ only in the identity-learning objective (Section~\ref{sec:objectives}). Weights are initialized from ImageNet-pretrained ResNet-50-IBN parameters. The optimizer is Adam with base learning rate $3.5\times10^{-4}$ and weight decay $5\times10^{-4}$. Cross-entropy-based heads use label smoothing with $\epsilon=0.1$; when enabled, triplet loss uses hard mining with zero margin. Training proceeds for fifty \emph{virtual} epochs, each defined as 2{,}000 parameter updates sampled from the multi-source loader (the combined training pool is much larger than a single pass over all images). The convolutional backbone is kept fixed for the first 1{,}000 updates and then trained jointly with the embedding head. The learning rate follows cosine decay after a twenty-epoch delay, with a linear warmup over the first 1{,}000 iterations and a floor of $7\times10^{-7}$. Minibatches contain 128 images in total, with eight instances per identity and domain-balanced sampling as in Section~\ref{sec:train-curation}. Mixed-precision forward passes are used during training; validation feature extraction is performed in full precision. Primary runs were executed on two GPU accelerators with data-parallel replication of the model and batch; the same settings are used for every objective variant. Each of the nine objectives is trained three times with random seeds $0$, $1$, and $2$; all other hyperparameters are held fixed across seeds. Test results in Section~\ref{sec:results} aggregate performance over these three runs (mean and, where reported, standard deviation).
+Training proceeds for 50 \emph{virtual epochs}, each comprising 2,000 parameter updates sampled from the multi-source loader. This definition accommodates the combined training pool, which is substantially larger than a single pass over all images. The backbone remains frozen for the first 1,000 updates and is subsequently optimized jointly with the embedding head. The learning rate follows cosine decay after a 20-epoch delay, with linear warmup over the first 1,000 iterations and a minimum learning rate of $7\times10^{-7}$. Minibatches contain 128 images, with eight instances per identity, using domain-balanced sampling as described in Section~\ref{sec:train-curation}. Mixed-precision forward passes are used during training, whereas validation feature extraction is performed in full precision. Primary experiments are conducted using two GPU accelerators with data-parallel model replication. Each SBS objective is trained using three random seeds ($0$, $1$, and $2$), with all other hyperparameters held fixed. The separate cross-backbone comparison applies the same optimization and evaluation protocol to the FastReID Circle-softmax-plus-triplet default and the candidate selected from the primary loss sweep.
 
-\subsection{Validation Protocol and Checkpoint Selection}
-\label{sec:validation}
+For checkpoint selection, we construct a composite validation protocol using source-specific identities, retaining official partitions where available and predefined cross-view or cross-context splits otherwise. The four public evaluation benchmarks are excluded from training, validation, and checkpoint selection. Every five virtual epochs, including the final epoch, we evaluate each validation protocol using L2-normalized cosine similarity. Gallery images sharing both identity and camera with a query are excluded. The selected checkpoint maximizes the unweighted mean validation score across protocols:
 
-The five public benchmarks and the Alexandria campus set must not influence any training decision. Model selection therefore relies on a \emph{composite validation split} fixed before optimization begins. During harmonization, each training source contributes a disjoint set of validation identities together with predefined query and gallery assignments: where a benchmark publishes an official validation partition, that partition is used; otherwise we adopt documented internal cross-view or cross-context protocols appropriate to the source (e.g., alternate camera sets or held-out contexts). These partitions are merged into one validation corpus that shares no identities with the training loader.
+\begin{equation}
+s_i =
+\frac{\mathrm{Rank\text{-}1}_i+\mathrm{mAP}_i}{2}.
+\end{equation}
 
-Every five virtual epochs, and once at the end of training, the current model is evaluated on each source-specific validation protocol separately. Embeddings are L2-normalized and ranked by cosine distance; gallery items that share both identity and camera with a query are treated as junk and ignored, following the usual Market-1501 evaluation convention. We record Rank-1, Rank-5, Rank-10, mean average precision, and mean inverse negative penalty for each protocol. For checkpoint selection we reduce each protocol to a single score $s_i=(\mathrm{Rank\text{-}1}_i+\mathrm{mAP}_i)/2$ and retain the weights that maximize the unweighted mean $\bar{s}=\frac{1}{N}\sum_i s_i$ over all $N$ protocols. The same rule is applied to every objective variant on the primary backbone. This design deliberately avoids validating on Market-1501 or MSMT17 while claiming those sets as unseen tests at deployment time.
+The final checkpoint is selected according to the mean of $s_i$ across validation protocols.
 
 \subsection{Identity-Learning Objectives in a Unified View}
 \label{sec:objectives}
 
-We use a common notation to distinguish the heads by their target and non-target scores and by the structure they assume for each identity class. We follow the cited formulations rather than proposing new losses; implementation-specific details that remain to be verified are marked explicitly.
+We compare different identity-learning heads using a common notation that distinguishes their target and non-target scores and the class structures they assume. The implementations follow the cited formulations; the objective configurations are summarized in Table~\ref{tab:unified}.
 
 \paragraph{Notation and cross-entropy heads.}
-Let $\mathbf{f}\in\mathbb{R}^{d}$ be the embedding of an image with identity label $y$, and let $C=10{,}036$ be the number of training identities. Linear softmax uses bias-free logits $z_j=\mathbf{w}_j^{\top}\mathbf{f}$, as in the BNNeck design of~\cite{luo2019bag}. For angular heads, features and class centers are $\ell_2$-normalized, so $\cos\theta_j=\mathbf{w}_j^{\top}\mathbf{f}/(\Vert\mathbf{w}_j\Vert\,\Vert\mathbf{f}\Vert)$, and $s$ denotes a logit scale. The cross-entropy-based heads use label smoothing with $\epsilon=0.1$: if $p_j=\exp(z_j)/\sum_{k=1}^{C}\exp(z_k)$ and $q_j=(1-\epsilon)$ for $j=y$ and $q_j=\epsilon/(C-1)$ otherwise, then
-\begin{equation}
-\mathcal{L}_{\mathrm{CE}}=-\sum_{j=1}^{C}q_j\log p_j.
-\end{equation}
-Here $z_j$ is the head-specific logit shown in Table~\ref{tab:unified}. SphereFace2 instead uses the binary objective described below.
+Let $\mathbf{f}\in\mathbb{R}^{d}$ denote the embedding of an image with identity label $y$, and let $C=10{,}036$ denote the number of training identities. Linear softmax uses bias-free logits $z_j=\mathbf{w}_j^{\top}\mathbf{f}$, following the BNNeck design~\cite{luo2019bag}. For angular heads, features and class centers are $\ell_2$-normalized, such that
 
-\paragraph{Heads.}
-Table~\ref{tab:unified} summarizes the compared heads. For Sub-center ArcFace, $k$ indexes the centers of an identity; the target uses the best-matching center, and each non-target identity is represented by its maximum-similarity center. The Circle-softmax row gives the class-level variant used in the Strong Baseline, rather than the pair-based Circle Loss formulation.
+\begin{equation}
+\cos\theta_j =
+\frac{\mathbf{w}_j^{\top}\mathbf{f}}
+{\|\mathbf{w}_j\|\|\mathbf{f}\|},
+\end{equation}
+
+where $s$ denotes the logit scale. Cross-entropy-based heads use label smoothing with $\epsilon=0.1$. The smoothed target distribution is defined as
+
+\begin{equation}
+q_j =
+\begin{cases}
+1-\epsilon, & j=y,\\
+\frac{\epsilon}{C-1}, & j\neq y.
+\end{cases}
+\end{equation}
+
+Given the head-specific logits $z_j$ and softmax probabilities $p_j$, the classification objective is
+
+\begin{equation}
+\mathcal{L}_{\mathrm{CE}}
+=
+-\sum_{j=1}^{C}q_j\log p_j,
+\qquad
+p_j=\frac{\exp(z_j)}{\sum_{k=1}^{C}\exp(z_k)}.
+\end{equation}
+
+SphereFace2 instead employs an independent binary-classification objective, described below.
+
+\paragraph{Classification heads.}
+Table~\ref{tab:unified} summarizes the compared heads. For Sub-center ArcFace, each identity is represented by $K$ centers. The target identity uses its best-matching center, while each non-target identity is represented by its maximum-similarity center. The Circle-softmax formulation corresponds to the class-level variant implemented in the Strong Baseline rather than the pair-based Circle Loss formulation.
 
 \begin{table}[t]
-\caption{Unified view of the compared identity heads. $\theta_j$ denotes the angle between the feature and a class center; $z_y$ and $z_j$ are target and non-target logits for cross-entropy heads. Exact settings follow the cited methods and implementation.}
+\caption{Unified view of the compared identity-learning heads. $\theta_j$ denotes the angle between a feature and a class center, while $z_y$ and $z_j$ denote target and non-target logits for cross-entropy heads.}
 \label{tab:unified}
 \centering
 \scriptsize
@@ -228,33 +224,87 @@ Table~\ref{tab:unified} summarizes the compared heads. For Sub-center ArcFace, $
 \toprule
 Head & Target score & Non-target score & Class assumption & Settings \\
 \midrule
-Linear softmax~\cite{luo2019bag} & $\mathbf{w}_y^{\top}\mathbf{f}$ & $\mathbf{w}_j^{\top}\mathbf{f}$ & One unnormalized vector per identity & None \\
-ArcFace~\cite{deng2019arcface} & $s\cos(\theta_y+m)$ & $s\cos\theta_j$ & One center; additive angular margin & $s{=}64$, $m{=}0.35$ \\
-Sub-center ArcFace~\cite{deng2020subcenter} & $s\cos(\theta_{y,k^*}+m)$, $k^*=\arg\max_k\cos\theta_{y,k}$ & $s\max_k\cos\theta_{j,k}$ & $K$ centers per identity & $K{=}3$ \\
-SphereFace2~\cite{wen2022sphereface2} & $r(g(\cos\theta_y)-m)+b$ & $r(g(\cos\theta_j)+m)+b$ & Independent per-class binary decisions & $r{=}40$, $m{=}0.4$, $\lambda{=}0.9$, $t{=}3$ \\
-Circle-softmax~\cite{sun2020circle,song2020strong} & $s\alpha_p(\cos\theta_y-\Delta_p)$ & $s\alpha_n^j(\cos\theta_j-\Delta_n)$ & One center; adaptive per-logit weights & $s{=}64$, $m{=}0.35$ \\
+Linear softmax~\cite{luo2019bag}
+& $\mathbf{w}_y^{\top}\mathbf{f}$
+& $\mathbf{w}_j^{\top}\mathbf{f}$
+& One unnormalized vector per identity
+& None \\
+
+ArcFace~\cite{deng2019arcface}
+& $s\cos(\theta_y+m)$
+& $s\cos\theta_j$
+& One center; additive angular margin
+& $s=64$, $m=0.35$ \\
+
+Sub-center ArcFace~\cite{deng2020subcenter}
+& $s\cos(\theta_{y,k^*}+m)$
+& $s\max_k\cos\theta_{j,k}$
+& $K$ centers per identity
+& $K=3$ \\
+
+SphereFace2~\cite{wen2022sphereface2}
+& $r(g(\cos\theta_y)-m)+b$
+& $r(g(\cos\theta_j)+m)+b$
+& Independent per-class binary decisions
+& $r=40$, $m=0.4$ \\
+
+Circle-softmax~\cite{sun2020circle,song2020strong}
+& $s\alpha_p(\cos\theta_y-\Delta_p)$
+& $s\alpha_n^j(\cos\theta_j-\Delta_n)$
+& One center; adaptive per-logit weights
+& $s=64$, $m=0.35$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-For Circle-softmax, the weights are $\alpha_p=[1+m-\cos\theta_y]_+$ and $\alpha_n^j=[\cos\theta_j+m]_+$, treated as constants during backpropagation, with $\Delta_p=1-m$ and $\Delta_n=m$. This is the class-level head used by FastReID, not the pair-based objective in the original Circle Loss paper~\cite{sun2020circle,song2020strong}.
+For Circle-softmax, the adaptive weights are defined as
 
-SphereFace2 replaces the softmax over identities with $C$ independent binary classifiers~\cite{wen2022sphereface2}. We use its SphereFace2-C form with additive margin and similarity adjustment $g(z)=2\left(\frac{z+1}{2}\right)^{t}-1$:
+\begin{equation}
+\alpha_p=[1+m-\cos\theta_y]_+,
+\qquad
+\alpha_n^j=[\cos\theta_j+m]_+,
+\end{equation}
+
+with $\Delta_p=1-m$ and $\Delta_n=m$. These weights are treated as constants during backpropagation. This is the class-level head used by FastReID, rather than the pair-based objective introduced in the original Circle Loss formulation~\cite{sun2020circle,song2020strong}.
+
+SphereFace2 replaces the softmax over identities with $C$ independent binary classifiers~\cite{wen2022sphereface2}. We use its SphereFace2-C formulation with an additive margin and similarity adjustment:
+
+\begin{equation}
+g(z)=2\left(\frac{z+1}{2}\right)^t-1.
+\end{equation}
+
+The resulting objective is
+
 \begin{equation}
 \begin{split}
-\mathcal{L}_{\mathrm{SF2}}={}&\frac{\omega\lambda}{r}\log\!\left(1+\exp\!\left[-\left(r\left(g(\cos\theta_y)-m\right)+b\right)\right]\right)\\
-&+\frac{\omega(1-\lambda)}{r}\sum_{j\ne y}\log\!\left(1+\exp\!\left[r\left(g(\cos\theta_j)+m\right)+b\right]\right),
+\mathcal{L}_{\mathrm{SF2}}={}&
+\frac{\omega\lambda}{r}
+\log\left(1+\exp\left[-\left(r(g(\cos\theta_y)-m)+b\right)\right]\right)
+\\
+&+
+\frac{\omega(1-\lambda)}{r}
+\sum_{j\ne y}
+\log\left(1+\exp\left[r(g(\cos\theta_j)+m)+b\right]\right).
 \end{split}
 \end{equation}
-where $r$ is the hypersphere radius, $m$ the margin, $\lambda$ balances the single positive term against the $C-1$ negative terms, $b$ is a learnable bias, and $\omega$ is a constant loss weight. We set $r=40$, $m=0.4$, $\lambda=0.9$ as in the paper, $t=3$, and $\omega=50$ following the authors' reference code, and initialize $b$ to the value that balances the positive and negative terms at the start of training. As in that implementation, $g$ and $m$ enter as a constant offset to $\cos\theta_j$ during backpropagation, so gradients are taken with respect to the cosine similarity itself.
+
+Here, $r$ denotes the hypersphere radius, $m$ the margin, $\lambda$ balances the positive term against the negative terms, $b$ is a learnable bias, and $\omega$ is a constant loss weight. We adopt the reference implementation settings $r=40$, $m=0.4$, $\lambda=0.9$, $t=3$, and $\omega=50$. The bias $b$ is initialized to balance the positive and negative terms at the beginning of training. As in the reference implementation, the similarity adjustment and margin are treated as constant offsets during backpropagation, with gradients computed with respect to the cosine similarities.
 
 \paragraph{Triplet loss and evaluated configurations.}
-When enabled, hard-mined triplet loss is added to the head-specific objective. The configured margin is zero, corresponding in the FastReID implementation to the soft-margin form $\mathcal{L}_{\mathrm{tri}}=\log(1+\exp(d_{ap}-d_{an}))$, where $d_{ap}$ and $d_{an}$ are the Euclidean distances from an anchor to its hardest positive and hardest negative, computed on the unnormalized BNNeck features. Mining is performed within each device's sub-batch of 64 images, which contains eight identities with eight images each.
+When enabled, hard-mined triplet loss is added to the head-specific objective. The configured margin is zero, corresponding to the soft-margin formulation used in the FastReID implementation:
 
-The experiment contains nine configurations: four heads without triplet loss (linear softmax, ArcFace, Sub-center ArcFace, and SphereFace2) and all five heads with triplet loss, including the Circle-softmax default. Circle-softmax without triplet loss was not run, so the design is not a complete five-head-by-two-loss factorial and does not isolate the triplet effect for Circle-softmax. Table~\ref{tab:conditions} lists the configurations and their references.
+\begin{equation}
+\mathcal{L}_{\mathrm{tri}}
+=
+\log\left(1+\exp(d_{ap}-d_{an})\right),
+\end{equation}
+
+where $d_{ap}$ and $d_{an}$ denote the Euclidean distances from an anchor to its hardest positive and hardest negative, respectively. These distances are computed using the unnormalized BNNeck features. Mining is performed within each device's sub-batch of 64 images, containing eight identities with eight images per identity.
+
+The primary loss sweep comprises eight candidate configurations: linear softmax, ArcFace, Sub-center ArcFace, and SphereFace2, each evaluated both without and with hard-mined triplet loss. Thus, triplet supervision is an explicit comparison factor for every candidate head. The FastReID Circle-softmax-plus-triplet default is not part of this sweep; it is reserved as the reference objective in the separate comparison across the SBS, OSNet, and ConvNeXt-S. The eight candidates share a common \texttt{LossStudyBaseline} meta-architecture except where noted in Table~\ref{tab:conditions}.
 
 \begin{table}[t]
-\caption{Nine objective configurations evaluated on the shared SBS R50-IBN model.}
+\caption{Eight candidate objective configurations evaluated using the shared SBS R50-IBN architecture. Each head is trained with and without triplet loss.}
 \label{tab:conditions}
 \centering
 \footnotesize
@@ -263,120 +313,126 @@ The experiment contains nine configurations: four heads without triplet loss (li
 Classifier / head & Losses & Reference \\
 \midrule
 Linear softmax & CE & \cite{luo2019bag} \\
-ArcFace ($s{=}64,m{=}0.35$) & CE & \cite{deng2019arcface} \\
-Sub-center ArcFace ($K{=}3$) & CE & \cite{deng2020subcenter} \\
+ArcFace ($s=64,m=0.35$) & CE & \cite{deng2019arcface} \\
+Sub-center ArcFace ($K=3$) & CE & \cite{deng2020subcenter} \\
 Angular head & SphereFace2 & \cite{wen2022sphereface2} \\
 \midrule
-Circle-softmax (SBS default) & CE + Triplet & \cite{song2020strong,sun2020circle,hermans2017triplet} \\
 Linear softmax & CE + Triplet & \cite{luo2019bag,hermans2017triplet} \\
 ArcFace & CE + Triplet & \cite{deng2019arcface,hermans2017triplet} \\
-Sub-center ArcFace ($K{=}3$) & CE + Triplet & \cite{deng2020subcenter,hermans2017triplet} \\
+Sub-center ArcFace ($K=3$) & CE + Triplet & \cite{deng2020subcenter,hermans2017triplet} \\
 Angular head & SphereFace2 + Triplet & \cite{wen2022sphereface2,hermans2017triplet} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Cross-Backbone Validation (planned)}
-\label{sec:backbones}
-To test whether the ranking of objectives depends on architecture, we plan to repeat the training protocol on OSNet~\cite{zhou2022learning} and ConvNeXt-S~\cite{liu2022convnet}, two ImageNet-pretrained convolutional networks of different capacity, once the strongest objective on the ResNet-50-IBN Strong Baseline has been determined from the nine-way comparison. Those runs will pair the selected objective with the Circle-softmax default (both with triplet loss) under the same data and evaluation protocol as above. Results for OSNet and ConvNeXt-S are not reported here; Table~\ref{tab:backbone} and the efficiency rows for those networks remain placeholders until that stage is executed.
+\subsection{Evaluation Metrics}
+\label{sec:metrics}
+
+We evaluate retrieval performance using mean average precision (mAP) and the cumulative matching characteristic (CMC), following the standard query and gallery protocols of each benchmark. CMC performance is summarized using Rank-1 and Rank-5 accuracy, representing the proportion of queries for which a correct match appears within the top one and top five retrieved gallery images, respectively. Full CMC curves up to Rank-20 are additionally reported for selected models. Extracted features are $\ell_2$-normalized and ranked using cosine similarity. No re-ranking is applied. All models are evaluated using identical query and gallery roles within each benchmark, ensuring consistent comparisons across objective configurations and architectures.
+
 
 %==============================================================================
+
 \section{Results}
 \label{sec:results}
 
-All main-table entries report mean mAP and Rank-1 (\%) on held-out tests, averaged over random seeds $0$, $1$, and $2$ (twenty-seven training runs in total: nine objectives $\times$ three seeds). Standard deviations across seeds are given in the tables or in supplementary material where space is limited. The Alexandria column is reported separately from the five public benchmarks, and the average is computed over the five public benchmarks only. Rank-5 accuracy and CMC curves are reported in Section~\ref{sec:detailed}.
+The primary objective comparison comprises 24 training runs (eight candidate configurations $\times$ three seeds). Held-out retrieval is reported on four public benchmarks---Market-1501, MSMT17, DukeMTMC-reID, and Occluded-Duke---using the unseen-target evaluation bundle. Each table cell gives mean mAP / Rank-1 (\%) with seed standard deviations ($\pm$). The average column is the unweighted mean across the four benchmarks. Rank-5 accuracy and CMC curves provide additional analysis; the default-versus-selected cross-backbone comparison is reported separately.
 
-\subsection{Loss Functions Without Triplet Loss}
-Table~\ref{tab:noTriplet} compares the four classification objectives trained without triplet loss \todo{interpret after results are available}.
+\subsection{Objective Comparison}
+\label{sec:objective-results}
+
+Tables~\ref{tab:noTriplet} and~\ref{tab:triplet} compare the evaluated classification objectives without and with triplet supervision, respectively. This comparison examines their retrieval performance under the same SBS architecture and multi-source training protocol.
 
 \begin{table}[t]
-\caption{Objective comparison without triplet loss: mean mAP / Rank-1 (\%) over seeds 0--2.}
+\caption{Objective comparison without triplet loss: mean mAP / Rank-1 (\%) over seeds 0--2 on four held-out benchmarks.}
 \label{tab:noTriplet}
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}l*{5}{c}c|c@{}}
+\begin{tabular}{@{}l*{5}{c}@{}}
 \toprule
-Objective & Market & MSMT17 & MARS & Duke & Occ-Duke & Avg. & Alexandria \\
+Objective & Market & MSMT17 & Duke & Occ-Duke & Avg. \\
 \midrule
-Linear softmax & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-ArcFace & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-Sub-center ArcFace & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-SphereFace2 & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
+Linear softmax & \mstd{58.7}{0.5} / \mstd{81.0}{0.6} & \mstd{16.2}{0.3} / \mstd{36.3}{0.5} & \mstd{48.8}{0.4} / \mstd{65.7}{0.7} & \mstd{21.0}{0.7} / \mstd{26.9}{0.6} & \mstd{36.2}{0.2} / \mstd{52.5}{0.2} \\
+ArcFace & \mstd{69.8}{0.3} / \mstd{87.8}{0.2} & \mstd{23.5}{0.4} / \mstd{49.3}{0.5} & \mstd{56.9}{0.5} / \mstd{73.4}{0.6} & \mstd{28.9}{0.5} / \mstd{37.1}{0.6} & \mstd{44.8}{0.3} / \mstd{61.9}{0.1} \\
+Sub-center ArcFace & \TBD & \TBD & \TBD & \TBD & \TBD \\
+SphereFace2 & \mstd{60.3}{1.4} / \mstd{83.5}{0.4} & \mstd{16.7}{1.0} / \mstd{37.9}{1.2} & \mstd{43.6}{4.3} / \mstd{65.6}{2.5} & \mstd{21.0}{2.3} / \mstd{31.9}{2.2} & \mstd{35.4}{2.2} / \mstd{54.7}{1.4} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Loss Functions Combined with Triplet Loss}
-Table~\ref{tab:triplet} repeats the comparison with triplet loss added, following the FastReID recipe, and includes the default Circle-softmax configuration \todo{interpret after results are available, including the effect of adding triplet loss to each head}.
-
 \begin{table}[t]
-\caption{Objective comparison with triplet loss: mean mAP / Rank-1 (\%) over seeds 0--2.}
+\caption{Objective comparison with triplet loss: mean mAP / Rank-1 (\%) over seeds 0--2 on four held-out benchmarks.}
 \label{tab:triplet}
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}l*{5}{c}c|c@{}}
+\begin{tabular}{@{}l*{5}{c}@{}}
 \toprule
-Objective & Market & MSMT17 & MARS & Duke & Occ-Duke & Avg. & Alexandria \\
+Objective & Market & MSMT17 & Duke & Occ-Duke & Avg. \\
 \midrule
-Circle-softmax (SBS default) & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-Linear softmax & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-ArcFace & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-Sub-center ArcFace & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-SphereFace2 & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
+Linear softmax & \TBD & \TBD & \TBD & \TBD & \TBD \\
+ArcFace & \mstd{70.4}{0.8} / \mstd{87.9}{0.4} & \mstd{22.0}{0.2} / \mstd{46.6}{0.4} & \mstd{56.3}{0.5} / \mstd{72.4}{0.6} & \mstd{28.7}{0.5} / \mstd{35.8}{0.5} & \mstd{44.3}{0.2} / \mstd{60.7}{0.1} \\
+Sub-center ArcFace & \mstd{67.6}{0.6} / \mstd{87.1}{0.4} & \mstd{20.7}{0.4} / \mstd{44.4}{0.8} & \mstd{54.1}{0.5} / \mstd{70.3}{0.6} & \mstd{26.2}{0.8} / \mstd{33.3}{1.1} & \mstd{42.1}{0.5} / \mstd{58.8}{0.7} \\
+SphereFace2  & \mstd{62.2}{2.0} / \mstd{84.4}{0.9} & \mstd{16.3}{0.8} / \mstd{37.8}{1.9} & \mstd{45.2}{0.7} / \mstd{66.4}{0.6} & \mstd{23.0}{0.8} / \mstd{34.9}{0.4} & \mstd{36.7}{0.7} / \mstd{55.9}{0.7} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Cross-Backbone Validation}
-After the nine-way comparison on the Strong Baseline, the internally selected best objective and the Circle-softmax default will be retrained on OSNet and ConvNeXt-S under the same protocol (Section~\ref{sec:backbones}). Table~\ref{tab:backbone} will be populated when those experiments are complete; no cross-backbone test numbers are claimed in the present submission.
+Tables~\ref{tab:noTriplet} and~\ref{tab:triplet} report held-out results for the eight candidate objectives, separated by whether triplet supervision is used. The Circle-softmax-plus-triplet FastReID default is excluded from these tables and appears only in the cross-backbone comparison. The best candidate will be selected using the composite internal validation protocol and compared with the default across all three backbones.
+
+\subsection{Cross-Backbone Comparison}
+\label{sec:backbone-results}
+
+To examine whether the validation-selected candidate transfers beyond the primary architecture, we compare it with the FastReID Circle-softmax-plus-triplet default using SBS R50-IBN, OSNet, and ConvNeXt-S. Table~\ref{tab:backbone} summarizes retrieval on the same four held-out image benchmarks.
 
 \begin{table}[t]
-\caption{Cross-backbone comparison (planned; mAP / Rank-1, \%). Rows for OSNet and ConvNeXt-S pending retraining with the best objective from Table~\ref{tab:triplet}.}
+\caption{Cross-backbone comparison (mAP / Rank-1, \%; mean$\pm$std over seeds 0--2 on four held-out benchmarks).}
 \label{tab:backbone}
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}ll*{5}{c}c|c@{}}
+\begin{tabular}{@{}ll*{5}{c}@{}}
 \toprule
-Backbone & Objective & Market & MSMT17 & MARS & Duke & Occ-Duke & Avg. & Alexandria \\
+Backbone & Objective & Market & MSMT17 & Duke & Occ-Duke & Avg. \\
 \midrule
-SBS R50-IBN & Circle-softmax + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-SBS R50-IBN & Best formulation & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
+SBS R50-IBN & Circle-softmax + Triplet & \mstd{67.4}{1.3} / \mstd{86.7}{0.6} & \mstd{15.5}{0.2} / \mstd{37.5}{0.4} & \mstd{52.5}{1.1} / \mstd{71.2}{1.1} & \mstd{26.9}{1.0} / \mstd{36.2}{1.2} & \mstd{40.6}{0.8} / \mstd{57.9}{0.6} \\
+SBS R50-IBN & Selected candidate & \TBD & \TBD & \TBD & \TBD & \TBD \\
 \midrule
-OSNet & Circle-softmax + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-OSNet & Best formulation & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
+OSNet & Circle-softmax + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD \\
+OSNet & Selected candidate & \TBD & \TBD & \TBD & \TBD & \TBD \\
 \midrule
-ConvNeXt-S & Circle-softmax + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-ConvNeXt-S & Best formulation & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
+ConvNeXt-S & Circle-softmax + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD \\
+ConvNeXt-S & Selected candidate & \TBD & \TBD & \TBD & \TBD & \TBD \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Rank-5 Accuracy and CMC Curves}
+This comparison tests whether the candidate selected by internal validation retains its relative performance against the FastReID default across architectures. \todo{Discuss the cross-backbone results and any architecture-dependent differences.}
+
+\subsection{Retrieval Performance Analysis}
 \label{sec:detailed}
-Table~\ref{tab:rank5} reports Rank-5 accuracy for all nine objective configurations, and Figure~\ref{fig:cmc} shows CMC curves of the best formulation and the Circle-softmax default on each benchmark \todo{interpret after results are available}.
+
+In addition to mAP and Rank-1, Table~\ref{tab:rank5} reports Rank-5 accuracy for the eight candidate objective configurations. Figure~\ref{fig:cmc} compares the validation-selected candidate with the Circle-softmax-plus-triplet FastReID default across the public benchmarks, providing a view of retrieval performance beyond the first few ranks.
 
 \begin{table}[t]
-\caption{Rank-5 accuracy (\%): mean over seeds 0--2 for all nine objective configurations.}
+\caption{Rank-5 accuracy (\%): mean$\pm$std over seeds 0--2 for the eight candidate objective configurations on four held-out benchmarks.}
 \label{tab:rank5}
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}l*{5}{c}c|c@{}}
+\begin{tabular}{@{}l*{5}{c}@{}}
 \toprule
-Objective & Market & MSMT17 & MARS & Duke & Occ-Duke & Avg. & Alexandria \\
+Objective & Market & MSMT17 & Duke & Occ-Duke & Avg. \\
 \midrule
-Linear softmax (CE) & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-ArcFace (CE) & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-Sub-center ArcFace (CE) & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-SphereFace2 & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-Circle-softmax + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-Linear softmax + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-ArcFace + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-Sub-center ArcFace + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
-SphereFace2 + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
+Linear softmax (CE) & \mstd{89.9}{0.4} & \mstd{50.4}{0.5} & \mstd{79.1}{0.2} & \mstd{41.1}{1.0} & \mstd{65.1}{0.0} \\
+ArcFace (CE) & \mstd{94.7}{0.1} & \mstd{63.0}{0.6} & \mstd{85.0}{0.3} & \mstd{51.4}{0.5} & \mstd{73.5}{0.1} \\
+Sub-center ArcFace (CE) & \TBD & \TBD & \TBD & \TBD & \TBD \\
+SphereFace2 & \mstd{93.5}{0.3} & \mstd{53.2}{1.0} & \mstd{79.1}{2.1} & \mstd{47.3}{2.8} & \mstd{68.3}{1.5} \\
+Linear softmax + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD \\
+ArcFace + Triplet & \mstd{95.0}{0.4} & \mstd{61.0}{0.2} & \mstd{84.6}{0.4} & \mstd{51.6}{0.9} & \mstd{73.0}{0.3} \\
+Sub-center ArcFace + Triplet & \mstd{94.4}{0.1} & \mstd{58.2}{1.0} & \mstd{83.2}{0.8} & \mstd{48.8}{1.7} & \mstd{71.2}{0.9} \\
+SphereFace2 + Triplet & \mstd{93.5}{0.4} & \mstd{53.2}{1.7} & \mstd{80.1}{0.8} & \mstd{50.2}{0.9} & \mstd{69.3}{0.5} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -385,69 +441,61 @@ SphereFace2 + Triplet & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD \\
 \centering
 \fbox{\parbox{0.92\textwidth}{\centering\vspace{1.5em}
 \textbf{Figure 2 (placeholder).}\\
-CMC curves (ranks 1--20) on each public benchmark and on Alexandria for the best formulation and the Circle-softmax default on SBS R50-IBN.
+CMC curves (Ranks 1--20) across the public evaluation benchmarks for the validation-selected candidate and the FastReID Circle-softmax-plus-triplet default using SBS R50-IBN.
 \vspace{1.5em}}}
-\caption{CMC curves of the best formulation and the default objective.}
+\caption{CMC curves comparing the validation-selected candidate with the FastReID default on the public evaluation benchmarks.}
 \label{fig:cmc}
 \end{figure}
 
-\subsection{Model Size and Inference Time}
-Table~\ref{tab:cost} reports parameter counts, computational cost, and inference speed for the convolutional models trained in this study, together with published parameter counts of representative large models for reference \todo{state hardware, batch size, precision, and input resolution used for timing; verify the published figures and their pretraining data}.
+\todo{Discuss whether Rank-5 and the CMC curves support the trends observed in mAP and Rank-1, including any differences between benchmarks.}
+
+\subsection{Computational Cost}
+\label{sec:efficiency}
+
+Table~\ref{tab:cost} compares the parameter counts, computational requirements, and inference speeds of the three convolutional architectures. These measurements provide additional context for interpreting their retrieval performance under practical computational constraints. For reference, published model-size figures for representative Transformer-based Re-ID approaches may also be included, provided that their measurement conditions and sources are clearly identified.
 
 \begin{table}[t]
-\caption{Model size, pretraining data, and inference cost. Rows marked $^\dagger$ are published reference figures for models not trained under our protocol.}
+\caption{Model size and inference cost of the evaluated convolutional architectures.}
 \label{tab:cost}
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}llcccc@{}}
+\begin{tabular}{@{}lccccc@{}}
 \toprule
-Model & Pretraining data & Params (M) & FLOPs (G) & Latency (ms/img) & Throughput (img/s) \\
+Model & Params (M) & FLOPs (G) & Latency (ms/img) & Throughput (img/s) \\
 \midrule
-SBS R50-IBN (ours) & ImageNet & \TBD & \TBD & \TBD & \TBD \\
-OSNet & ImageNet & \TBD & \TBD & \TBD & \TBD \\
-ConvNeXt-S & ImageNet & \TBD & \TBD & \TBD & \TBD \\
-\midrule
-TransReID (ViT-B)$^\dagger$ & \TBD & \TBD & \TBD & --- & --- \\
-CLIP-ReID$^\dagger$ & \TBD & \TBD & \TBD & --- & --- \\
-SOLIDER$^\dagger$ & \TBD & \TBD & \TBD & --- & --- \\
+SBS R50-IBN & \TBD & \TBD & \TBD & \TBD \\
+OSNet & \TBD & \TBD & \TBD & \TBD \\
+ConvNeXt-S & \TBD & \TBD & \TBD & \TBD \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{figure}[t]
-\centering
-\fbox{\parbox{0.92\textwidth}{\centering\vspace{1.5em}
-\textbf{Figure 3 (placeholder).}\\
-Qualitative retrieval: a query image and top-ranked gallery matches across cameras, including Alexandria samples.
-\vspace{1.5em}}}
-\caption{Example cross-camera retrieval on held-out data.}
-\label{fig:qualitative}
-\end{figure}
+Inference latency and throughput are measured under a consistent hardware and software configuration, using the same input resolution, batch size, and numerical precision. \todo{Specify the GPU, software environment, batch size, precision, and input resolution used for timing.}
 
 %==============================================================================
 \section{Discussion}
 \label{sec:discussion}
 
-\todo{Interpret Tables~\ref{tab:noTriplet}--\ref{tab:cost} without repeating every number.} The analysis will compare the objective families and the effect of triplet loss, then examine whether performance differences vary across still-image, tracklet, scale, and occlusion-heavy benchmarks and carry over to Alexandria. It will also consider whether observed trends are qualitatively consistent with the heads' assumptions about noisy or multi-modal classes; because no controlled label-noise ablation is performed, this interpretation will not be treated as causal. Cross-backbone results remain future work. All reported differences will be interpreted alongside variation across the three seeds, without formal significance claims.
+\todo{Interpret Tables~\ref{tab:noTriplet}--\ref{tab:cost} without repeating every number.} The analysis will compare the objective families and the effect of triplet loss, then examine whether performance differences vary across benchmarks with different scales and occlusion levels and carry over to Alexandria. It will also consider whether observed trends are qualitatively consistent with the heads' assumptions about noisy or multi-modal classes; because no controlled label-noise ablation is performed, this interpretation will not be treated as causal. The cross-backbone comparison tests whether the validation-selected candidate transfers to OSNet and ConvNeXt-S relative to the Circle-softmax-plus-triplet default. All reported differences will be interpreted alongside variation across the three seeds, without formal significance claims.
 
 %==============================================================================
 \section{Conclusion}
 \label{sec:conclusion}
 
-This work examined whether the identity-learning objective alone can improve the cross-domain generalization of an efficient convolutional person Re-ID model. Using the FastReID Strong Baseline trained on nine curated datasets, nine objective configurations were compared---each with three random seeds---on five unseen public benchmarks and on a new Alexandria University campus dataset. \todo{Summarize the main finding and its practical implication after experiments.} Follow-up training on OSNet and ConvNeXt-S with the winning objective, completion of the cross-source leakage review, extension and public release of the Alexandria dataset, and evaluation on transformer-based backbones remain directions for future work.
+This work examines how identity-learning objectives affect cross-domain generalization in person Re-ID. Eight candidate configurations, covering four identity-learning heads with and without triplet supervision, are compared on the FastReID Strong Baseline. The strongest candidate selected by composite internal validation is then compared with the Circle-softmax-plus-triplet FastReID default across the Strong Baseline, OSNet, and ConvNeXt-S. \todo{Summarize the selected candidate's gains and practical implications after results are finalized.} Completion of the cross-source leakage review, extension and public release of the Alexandria dataset, and evaluation on transformer-based backbones remain directions for future work.
 
 %==============================================================================
 \section{Limitations}
 \label{sec:limitations}
 
-The conclusions of this study are bounded by its experimental scope. They apply to the ImageNet-pretrained ResNet-50-IBN Strong Baseline at a resolution of $384{\times}128$ under a fixed fifty-epoch training budget, with test metrics averaged over three seeds; they may not transfer to OSNet, ConvNeXt-S, or large transformer and vision-language models, which are not evaluated in the present results. The best formulation is selected on the Strong Baseline only; cross-backbone runs are deferred until that choice is fixed. Internal validation is a pooled identity-holdout proxy rather than a public benchmark, so the checkpoints selected on it may not coincide with the optimum on the held-out benchmarks. In addition, the cross-source pixel-level duplicate check across the nine training sources and the test sets is not yet complete, so strict acquisition independence cannot be guaranteed; Market-1501 and MARS, as well as DukeMTMC and Occluded-Duke, also share acquisition history. The study also contains no controlled label-noise or identity-multimodality ablation, so interpretations of those properties are qualitative.
+The primary objective comparison covers eight candidate configurations on the ImageNet-pretrained ResNet-50-IBN Strong Baseline under a fixed fifty-epoch budget; its conclusions may not extend to other heads or architectures. The Circle-softmax-plus-triplet FastReID default is evaluated separately against the candidate selected using internal validation, with the cross-backbone comparison on OSNet and ConvNeXt-S underway and numerical values pending. Internal validation is a pooled identity-holdout proxy rather than a public benchmark, so selected checkpoints may not coincide with the optimum on held-out benchmarks. In addition, the cross-source pixel-level duplicate check across the nine training sources and test sets is not yet complete, so strict acquisition independence cannot be guaranteed; DukeMTMC and Occluded-Duke share acquisition history. The study contains no controlled label-noise or identity-multimodality ablation, so interpretations of those properties are qualitative.
 
 Finally, the availability of DukeMTMC depends on licensing, and release of the Alexandria data depends on institutional approval.
 
 \begin{credits}
-\subsubsection{\ackname}
-We thank the Faculty of Computers and Data Science, Alexandria University, for supporting data collection and compute.
+% \subsubsection{\ackname}
+% We thank the Faculty of Computers and Data Science, Alexandria University, for supporting data collection and compute.
 
 \subsubsection{\discintname}
 The authors have no competing interests to declare that are relevant to the content of this article.

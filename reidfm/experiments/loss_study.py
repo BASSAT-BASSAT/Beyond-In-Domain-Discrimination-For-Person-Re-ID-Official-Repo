@@ -14,6 +14,13 @@ _MANIFEST = repo_path("configs/experiments/loss_study_9.yaml")
 BACKBONE_MANIFEST = repo_path("configs/experiments/backbone_study.yaml")
 
 
+def load_backbone_study_manifest(path: str | Path | None = None) -> dict[str, Any]:
+    return load_yaml(path or BACKBONE_MANIFEST)
+
+
+BACKBONE_STUDY_CONDITIONS = frozenset(load_backbone_study_manifest()["conditions"].keys())
+
+
 @dataclass(frozen=True)
 class StudyRun:
     condition: str

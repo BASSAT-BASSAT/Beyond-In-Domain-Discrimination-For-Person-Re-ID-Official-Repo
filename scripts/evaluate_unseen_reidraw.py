@@ -19,7 +19,11 @@ from reidfm.data.unseen_targets import (  # noqa: E402
     reidraw_files_by_root_id,
 )
 from reidfm.experiments.contract import HELD_OUT_TEST_KEYS  # noqa: E402
-from reidfm.experiments.loss_study import expand_loss_study_run  # noqa: E402
+from reidfm.experiments.loss_study import (  # noqa: E402
+    BACKBONE_STUDY_CONDITIONS,
+    expand_loss_study_run,
+    load_backbone_study_manifest,
+)
 from reidfm.fastreid_compat import ensure_fastreid  # noqa: E402
 
 
@@ -83,7 +87,15 @@ def _resolve_eval_config(args, checkpoint: Path):
     config_file: Path | None = None
 
     if args.condition:
-        run = expand_loss_study_run(args.condition, args.seed)
+        if args.condition in BACKBONE_STUDY_CONDITIONS:
+            run = expand_loss_study_run(
+                args.condition,
+                args.seed,
+                manifest=load_backbone_study_manifest(),
+                output_root="outputs/backbone_study",
+            )
+        else:
+            run = expand_loss_study_run(args.condition, args.seed)
         opts = run.opts + opts
         model_key = run.init_model
         if explicit and explicit.is_file():
