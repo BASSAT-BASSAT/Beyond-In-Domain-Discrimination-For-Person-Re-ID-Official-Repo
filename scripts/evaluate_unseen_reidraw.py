@@ -63,6 +63,7 @@ def _result_key_to_battery(key: str) -> str | None:
     aliases = {
         "market1501": "market1501",
         "msmt17": "msmt17",
+        "msmt17v2": "msmt17",
         "mars": "mars",
         "dukemtmc": "dukemtmc",
         "occludeddukemtmc": "occludedduke",
@@ -221,7 +222,7 @@ def main() -> int:
             last = cmc[-1] if cmc else battery_results[battery_key]["Rank-20"]
             battery_results[battery_key]["cmc"] = cmc + [last] * (20 - len(cmc))
 
-    paper = build_paper_payload(battery_results)
+    paper = build_paper_payload(battery_results, held_out_keys=tuple(datasets))
     name = args.name or f"{args.condition or checkpoint.parent.name}_heldout"
     out_dir = repo_path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
