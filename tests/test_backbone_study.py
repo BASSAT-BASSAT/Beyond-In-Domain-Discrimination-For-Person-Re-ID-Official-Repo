@@ -12,6 +12,15 @@ from reidfm.experiments.loss_study import (
     load_loss_study_manifest,
 )
 
+R0_CONDITIONS = ("OSNet_R0", "ConvNeXtS_R0")
+B2_CONDITIONS = ("OSNet_B2", "ConvNeXtS_B2")
+FEAT_DIM = {
+    "OSNet_R0": 512,
+    "OSNet_B2": 512,
+    "ConvNeXtS_R0": 768,
+    "ConvNeXtS_B2": 768,
+}
+
 
 def _cfg(condition):
     from reidfm.config import load_cfg
@@ -25,7 +34,7 @@ def test_manifest_conditions_match_contract():
     assert tuple(manifest["conditions"]) == BACKBONE_STUDY_CONDITIONS
 
 
-def test_backbone_runs_differ_from_sbs_r0_only_in_backbone():
+def test_backbone_runs_share_schedule_and_imagenet_init():
     from reidfm.config import load_cfg
 
     sbs = expand_loss_study_run("R0", 0)
@@ -34,17 +43,45 @@ def test_backbone_runs_differ_from_sbs_r0_only_in_backbone():
         run, cfg = _cfg(condition)
         assert run.init_model in IMAGENET_INIT_MODELS
         assert run.init_model != sbs.init_model
-        for node in ("HEADS", "LOSSES"):
-            assert cfg.MODEL[node] == sbs_cfg.MODEL[node], (condition, node)
         assert cfg.SOLVER == sbs_cfg.SOLVER
         assert cfg.INPUT == sbs_cfg.INPUT
         assert cfg.DATALOADER == sbs_cfg.DATALOADER
         assert cfg.MODEL.BACKBONE.WITH_IBN is False and cfg.MODEL.BACKBONE.WITH_NL is False
 
 
+def test_backbone_r0_matches_sbs_circle_triplet_objective():
+    from reidfm.config import load_cfg
+
+    sbs = expand_loss_study_run("R0", 0)
+    sbs_cfg = load_cfg(sbs.config_file, sbs.opts)
+    for condition in R0_CONDITIONS:
+        _, cfg = _cfg(condition)
+        assert cfg.MODEL.HEADS == sbs_cfg.MODEL.HEADS
+        assert cfg.MODEL.LOSSES == sbs_cfg.MODEL.LOSSES
+        assert cfg.MODEL.HEADS.CLS_LAYER == "CircleSoftmax"
+        assert list(cfg.MODEL.LOSSES.NAME) == ["CrossEntropyLoss", "TripletLoss"]
+
+
+def test_backbone_b2_matches_sbs_arcface_objective():
+    from reidfm.config import load_cfg
+
+    sbs = expand_loss_study_run("B2", 0)
+    sbs_cfg = load_cfg(sbs.config_file, sbs.opts)
+    for condition in B2_CONDITIONS:
+        _, cfg = _cfg(condition)
+        assert cfg.MODEL.HEADS == sbs_cfg.MODEL.HEADS
+        assert cfg.MODEL.LOSSES == sbs_cfg.MODEL.LOSSES
+        assert cfg.MODEL.HEADS.CLS_LAYER == "ArcSoftmax"
+        assert list(cfg.MODEL.LOSSES.NAME) == ["CrossEntropyLoss"]
+        assert "TripletLoss" not in cfg.MODEL.LOSSES.NAME
+
+
 @pytest.mark.fastreid
-@pytest.mark.parametrize("condition,feat_dim", [("OSNet_R0", 512), ("ConvNeXtS_R0", 768)])
-def test_backbone_model_builds_and_embeds(condition, feat_dim):
+@pytest.mark.parametrize(
+    "condition",
+    ["OSNet_R0", "ConvNeXtS_R0", "OSNet_B2", "ConvNeXtS_B2"],
+)
+def test_backbone_model_builds_and_embeds(condition):
     from reidfm.fastreid_compat import ensure_fastreid
 
     ensure_fastreid()
@@ -58,7 +95,7 @@ def test_backbone_model_builds_and_embeds(condition, feat_dim):
     model = build_model(cfg).eval()
     with torch.no_grad():
         feats = model({"images": torch.zeros(2, 3, 384, 128)})
-    assert feats.shape == (2, feat_dim)
+    assert feats.shape == (2, FEAT_DIM[condition])
 
 
 @pytest.mark.fastreid

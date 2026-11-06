@@ -19,10 +19,12 @@ LOSS_STUDY_CONDITIONS: tuple[str, ...] = (
 
 PRIMARY_INIT_MODEL = "sbs_r50_ibn_imagenet"
 
-# Cross-backbone comparison: Circle-softmax + Triplet (R0) vs the selected objective.
+# Cross-backbone comparison: Circle-softmax + Triplet (R0) vs selected ArcFace (B2).
 BACKBONE_STUDY_CONDITIONS: tuple[str, ...] = (
     "OSNet_R0",
     "ConvNeXtS_R0",
+    "OSNet_B2",
+    "ConvNeXtS_B2",
 )
 
 IMAGENET_INIT_MODELS: FrozenSet[str] = frozenset(

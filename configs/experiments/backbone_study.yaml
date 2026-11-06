@@ -1,6 +1,7 @@
-# Cross-backbone comparison (paper Table "backbone"). Same data, schedule, head and
-# evaluation as the SBS loss study; only the backbone and its ImageNet init change.
-# Add the selected objective (e.g. OSNet_B7 / ConvNeXtS_B7) once the SBS study settles.
+# Cross-backbone comparison (paper Table "backbone"). Same data and schedule as the
+# SBS loss study; only the backbone / ImageNet init change. Objectives:
+#   *_R0  — FastReID Circle-softmax + Triplet default
+#   *_B2  — selected SBS candidate (ArcFace CE, no triplet; best held-out average)
 base_config: configs/scratch_sbs_r50ibn_imagenet.yml
 seeds: [0, 1, 2]
 
@@ -31,3 +32,30 @@ conditions:
       MODEL.HEADS.NAME: EmbeddingHead
       MODEL.HEADS.CLS_LAYER: CircleSoftmax
       MODEL.LOSSES.NAME: [CrossEntropyLoss, TripletLoss]
+
+  OSNet_B2:
+    init_model: osnet_ain_imagenet
+    opts:
+      MODEL.BACKBONE.NAME: build_osnet_ain_backbone
+      MODEL.BACKBONE.FEAT_DIM: 512
+      MODEL.BACKBONE.WITH_IBN: "False"
+      MODEL.BACKBONE.WITH_NL: "False"
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: ArcSoftmax
+      MODEL.LOSSES.NAME: [CrossEntropyLoss]
+
+  ConvNeXtS_B2:
+    init_model: convnext_s_imagenet
+    opts:
+      MODEL.BACKBONE.NAME: build_convnext_backbone
+      MODEL.BACKBONE.DEPTH: small
+      MODEL.BACKBONE.FEAT_DIM: 768
+      MODEL.BACKBONE.LAST_STRIDE: 1
+      MODEL.BACKBONE.DROP_PATH_RATIO: 0.1
+      MODEL.BACKBONE.WITH_IBN: "False"
+      MODEL.BACKBONE.WITH_NL: "False"
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: ArcSoftmax
+      MODEL.LOSSES.NAME: [CrossEntropyLoss]
