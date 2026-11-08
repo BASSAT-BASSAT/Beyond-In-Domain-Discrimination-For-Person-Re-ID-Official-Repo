@@ -13,7 +13,7 @@ Legend:
 
 ---
 
-## Pool v2 training sources (11)
+## Training sources
 
 ### CUHK03-NP — **Aligned**
 
@@ -32,7 +32,7 @@ Legend:
 |--|--|
 | **Official** | Train **5,000** IDs (71,248 imgs); **Val** 56 IDs (100 query + 21,279 gallery); **Test** 5,806 IDs (10,176 query + 125,353 gallery). Layout: `train/`, `val/query`, `val/gallery`, `test/query`, `test/gallery`. |
 | **Sources** | [GitHub shuxjweb/last](https://github.com/shuxjweb/last), [arXiv:2105.15076](https://arxiv.org/abs/2105.15076) Table II |
-| **reidfm** | `convert_last`: `train/` → train only; `eval_splits: [val, test]` → both official val and test q/g in manifest (`pool_v2_official_val`). |
+| **reidfm** | `convert_last`: `train/` → train only; official val and test query/gallery stay in the manifest. |
 
 ---
 
@@ -110,29 +110,18 @@ Legend:
 
 ---
 
-### MOT17 / MOT20 — **N/A** (ReID test)
-
-| | |
-|--|--|
-| **Official** | MOTChallenge: **train** sequences with public GT; **test** without published GT for detection/tracking — not a person-ReID query/gallery split. |
-| **Sources** | [MOTChallenge](https://motchallenge.net/) |
-| **reidfm** | `convert_mot*` → train crops only (`has_test: false`). Val = camera/scene → identity → dHash + `poolv2val`. |
-
----
-
-## Paper held-out tests (pool `test_sets`)
+## Held-out benchmarks
 
 | Dataset | Official split | reidfm | Status |
 |---------|----------------|--------|--------|
 | **Market-1501** | 751 train / 750 test; DPM boxes | `convert_market1501` | **Aligned** — [Zheng et al. 2015](https://openaccess.thecvf.com/content_cvpr_2015/papers/Zheng_Scalable_Person_Re-Identification_2015_CVPR_paper.pdf) |
 | **MSMT17** | `list_train.txt` / `list_val.txt` / `list_query.txt` / `list_gallery.txt` | `convert_msmt17` | **Aligned** — [Wei et al. 2018](https://arxiv.org/abs/1711.08565) |
-| **MARS** | 625 train / 626 test tracklets; q/g from test | `convert_mars` | **Aligned** — [Zheng et al. 2016](http://www.liangzheng.com.cn/Project/project_mars.html) |
 | **DukeMTMC-reID** | Market-style train/query/gallery | `convert_dukemtmc` | **Aligned** (dataset withdrawn; license/local copy only) |
 | **Occluded-Duke** | PGFA query/gallery (no train in pool) | `convert_occluded_duke` | **Aligned** — [Miao et al. 2019](https://arxiv.org/abs/1908.06913) |
 
 ---
 
-## Summary for `pool_v2_official_val`
+## Summary
 
 | Dataset | Official static eval for in-training val? | reidfm today |
 |---------|------------------------------------------|--------------|
@@ -144,7 +133,6 @@ Legend:
 | ORBench | Yes (RGB slice) | Partial (rgb_only) |
 | IUST | Yes (temporal packaging) | **Verify** Market folders vs paper |
 | PRID2011 | Yes (+ custom `tr*` train) | Partial |
-| MOT17/20 | No | Structured/dHash val |
 | RPIfield | No static split | Custom / structured val |
 
 ---
@@ -152,10 +140,7 @@ Legend:
 ## How to verify on your machine
 
 ```bash
-python scripts/prepare_datasets.py --pool configs/datasets/pool_v2_official_val.yaml
-python scripts/build_official_native_splits.py
+python scripts/prepare_datasets.py --pool configs/datasets/pool_v2.yaml
 ```
 
-Compare `splits/official_native_ratios.json` and `splits/split_meta.json` to the ID/image counts in the papers above. For DeepChange and IUST, cross-check `reports/` audit markdown in this repo.
-
-**Do not cite “official val” in the paper without matching the row status in this table.**
+Compare the manifests with the counts in the papers above. For DeepChange and IUST, cross-check the audit notes in `reports/`. The manuscript uses an identity holdout inside each source, and it does not train on Market-1501, MSMT17, DukeMTMC-reID, or Occluded-Duke.

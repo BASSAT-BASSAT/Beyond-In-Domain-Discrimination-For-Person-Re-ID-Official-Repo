@@ -1,8 +1,0 @@
-_BASE_CONFIG: ../smoke_sbs_r50ibn.yml
-
-OUTPUT_DIR: kaggle_smoke_sbs_r50
-
-REIDFM:
-  ITERS_PER_EPOCH: 10
-  TIME_BUDGET_H: 0.25
-  SEED: 0

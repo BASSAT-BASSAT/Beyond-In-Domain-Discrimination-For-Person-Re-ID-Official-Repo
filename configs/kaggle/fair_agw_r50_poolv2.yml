@@ -1,8 +1,0 @@
-_BASE_CONFIG: ../scratch_agw_r50ibn_imagenet.yml
-
-OUTPUT_DIR: kaggle_fair_agw_r50_poolv2
-
-REIDFM:
-  STUDY_MODE: true
-  SEED: 0
-  TRAIN_SPLIT: splits/pool_v2_train_ids.json

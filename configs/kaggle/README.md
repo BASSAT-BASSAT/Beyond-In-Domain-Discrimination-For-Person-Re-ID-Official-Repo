@@ -1,29 +1,26 @@
 # Kaggle presets (one yaml per run)
 
-Set **`CONFIG_YAML`** in `notebooks/01_kaggle_train.ipynb`. Each file uses `_BASE_CONFIG` to extend a full base recipe under `configs/`.
+Each file uses `_BASE_CONFIG` to extend a full recipe under `configs/`. The paper notebooks load these presets directly; see [`notebooks/reid_loss_study_50epoch_production/README.md`](../../notebooks/reid_loss_study_50epoch_production/README.md).
 
 ## Primary (recommended)
 
 | File | Description |
 |------|-------------|
-| **`primary_sbs_r50_poolv2.yml`** | ImageNet → **SBS R50-IBN**, pool v2, CircleSoftmax + triplet (**loss study R0**) |
+| **`primary_sbs_r50_poolv2.yml`** | ImageNet → Strong Baseline, Circle-softmax + triplet |
 
-## Loss ablations (B0–B7)
+## Loss ablations
 
-Same pool/budget as primary; only head/loss changes.
+Same pool and schedule as the primary. Only the head and the triplet term change.
 
-| File | Condition |
+| File | Objective |
 |------|-----------|
-| `loss_study_B0.yml` … `loss_study_B7.yml` | Linear / ArcFace / Sub-center / SphereFace2 variants |
+| `loss_study_B0.yml` | Linear softmax |
+| `loss_study_B1.yml` | Linear softmax + triplet |
+| `loss_study_B2.yml` | ArcFace |
+| `loss_study_B3.yml` | ArcFace + triplet |
+| `loss_study_B4.yml` | Sub-center ArcFace |
+| `loss_study_B5.yml` | Sub-center ArcFace + triplet |
+| `loss_study_B6.yml` | SphereFace2 |
+| `loss_study_B7.yml` | SphereFace2 + triplet |
 
-Regenerate from `configs/experiments/loss_study_9.yaml` if the matrix changes.
-
-## Other
-
-| File | Description |
-|------|-------------|
-| `finetune_sbs_r50_msmt_zoo.yml` | MSMT zoo init (secondary; not primary held-out claims) |
-| `fair_bot_r50_poolv2.yml` / `fair_agw_r50_poolv2.yml` | Appendix CNN baselines |
-| `smoke_sbs_r50.yml` | Short debug run |
-
-`OUTPUT_DIR` is the folder name under `/kaggle/working/output/`.
+The filename suffix is the checkpoint key stored with the trained weights. Regenerate from `configs/experiments/loss_study_9.yaml` if the matrix changes.

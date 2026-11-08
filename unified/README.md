@@ -114,12 +114,6 @@ Member 2's handoff was repaired and checked locally; its corrected full manifest
 - The original images are **not** bundled with this repository.
 - Local metadata validation does **not** prove that the image files exist at runtime; verify the roots and every referenced path in the Kaggle/training environment.
 
-## Remaining Gates
+## Where this sits in the paper
 
-1. **P4 — Cross-Dataset Leakage Clearance:** check acquisition provenance, exact image hashes, and risk-targeted near duplicates between sources and unseen targets; document keep/exclude decisions.
-2. **P5 Final Approval:** apply any evidence-based P4 exclusions and regenerate/freeze global manifests, mappings, and checksums as needed.
-3. **P6 — Multi-Source Sampling:** evaluate source balance, identity diversity, and camera/temporal repetition.
-4. **P7 — Model and Training Preparation:** verify checkpoint provenance, runtime paths, dataloader behavior, and training smoke tests.
-5. **Unseen-Domain Evaluation:** evaluate on Market1501 and MARS using the specified target protocols, without using target test results for model selection.
-
-**Status (22 October 2026):** P2 candidate metadata validated; P3 member splits and provisional global P5 handoff produced and metadata-checked. **P4 and runtime image-path verification pending. Training has not started.**
+These manifests are the nine training sources in the manuscript. Held-out evaluation is Market-1501, MSMT17, DukeMTMC-reID, and Occluded-Duke. Training, numbers, and how to rerun them are in the repository [README](../README.md).

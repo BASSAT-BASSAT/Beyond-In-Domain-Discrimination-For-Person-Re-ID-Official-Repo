@@ -1,4 +1,0 @@
-market_split,market_images,market_unique_frames,shared_exact_frames,prw_crops_on_shared_frames,prw_ids_on_shared_frames,market_images_on_shared_frames,market_ids_on_shared_frames
-train,12936,10036,3265,9205,456,4176,250
-gallery,19732,12599,3886,10499,475,6053,232
-query,3368,3069,893,2589,418,958,231

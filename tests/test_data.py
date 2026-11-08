@@ -98,7 +98,8 @@ def test_shipped_pools_are_valid():
     assert "market1501" not in pool_v2.sources
     assert {"prid2011", "iust"} <= set(pool_v2.sources)
     assert pool_v2.ood == []
-    assert set(pool_v2.test_sets) == {"market1501", "msmt17", "mars", "dukemtmc", "occludedduke"}
+    assert set(pool_v2.test_sets) == {"market1501", "msmt17", "dukemtmc", "occludedduke"}
+    assert "mot17" not in pool_v2.sources and "mot20" not in pool_v2.sources
     load_pool("configs/datasets/pool_smoke.yaml")
 
 

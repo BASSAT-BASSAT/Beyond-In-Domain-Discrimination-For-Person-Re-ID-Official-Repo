@@ -2,7 +2,7 @@
 
 ## Kaggle / ablations (pick one file)
 
-All paper and ablation runs for teammates: **[`kaggle/README.md`](kaggle/README.md)** — set `CONFIG_YAML` in `notebooks/01_kaggle_train.ipynb`.
+Paper runs are the Kaggle notebooks in [`notebooks/reid_loss_study_50epoch_production/`](../notebooks/reid_loss_study_50epoch_production/README.md). The presets below are what those notebooks load.
 
 ## Base recipes (used via `_BASE_CONFIG` overlays)
 
@@ -10,10 +10,8 @@ These full yamls are the source of truth for hyperparameters. Do not delete; kag
 
 | File | Role |
 |------|------|
-| `scratch_sbs_r50ibn_imagenet.yml` | ImageNet SBS R50-IBN, pool v2 (primary paper backbone) |
-| `scratch_bot_r50ibn_imagenet.yml` / `scratch_agw_r50ibn_imagenet.yml` | Fair appendix CNN baselines |
-| `finetune_sbs_r50ibn_msmt.yml` | Optional MSMT zoo init (secondary / not held-out primary) |
-| `smoke_sbs_r50ibn.yml` | Local CI smoke on `pool_smoke` |
+| `scratch_sbs_r50ibn_imagenet.yml` | ImageNet Strong Baseline, the paper backbone |
+| `smoke_sbs_r50ibn.yml` | Local smoke test on `pool_smoke` |
 
 CLI example: `python scripts/train.py --config-file configs/kaggle/primary_sbs_r50_poolv2.yml`
 
@@ -21,13 +19,13 @@ CLI example: `python scripts/train.py --config-file configs/kaggle/primary_sbs_r
 
 | File | Use |
 |------|-----|
-| `pool_v2.yaml` | **Paper training pool** (11 sources; held-out test battery in yaml) |
-| `pool_smoke.yaml` | Tiny Market + MSMT for local smoke tests |
+| `pool_v2.yaml` | The nine training sources and the four held-out benchmarks |
+| `pool_smoke.yaml` | Tiny Market + MSMT pool for local smoke tests |
 
 ## Experiments manifest (`experiments/`)
 
-- `loss_study_9.yaml` — nine-condition matrix for `scripts/run_loss_study.py` (local/CI)
-- `paper_fair_baselines.yaml` — BoT/AGW runner manifest
+- `loss_study_9.yaml` — the eight Strong Baseline objectives
+- `backbone_study.yaml` — Circle-softmax + triplet and ArcFace on OSNet and ConvNeXt-S
 
 ## Models (`models/`)
 

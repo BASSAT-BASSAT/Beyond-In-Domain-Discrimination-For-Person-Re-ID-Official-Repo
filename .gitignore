@@ -9,6 +9,7 @@ datasets/
 csv files/
 # Large P3 role files (keep p3_split_preview.json + Member */ JSON handoff in git)
 unified/final_dataset/**/p3/*_p3_provisional.csv
+unified/final_dataset/**/Member*_p3_provisional_csvs.zip
 weights/
 outputs/
 logs/

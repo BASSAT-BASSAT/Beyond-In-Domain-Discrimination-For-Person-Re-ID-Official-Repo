@@ -11,9 +11,11 @@ Thin CLIs over `reidfm`. Run from the repo root; `--help` on each for all flags.
 | `evaluate.py` | benchmark-protocol evaluation of a registry model or checkpoint on `--sets val/test/ood/all/<keys>`; writes `results/<name>.json` + `.md` |
 | `export_weights.py` | inference checkpoint (no classifier) + standalone FastReID yaml, loadable by the benchmark's `FastReIDEncoder`; `--register` adds it to the model registry |
 | `extract_embeddings.py` | embed an image folder or a folder of tracklets to `.npz` |
-| `run_loss_study.py` | nine-condition angular-loss study (`configs/experiments/loss_study_9.yaml`); `--dry-run`, `--screening`, `--all` |
-| `run_fair_baselines.py` | BoT/AGW appendix baselines on pool v2 (`configs/experiments/paper_fair_baselines.yaml`) |
-| `aggregate_loss_study.py` / `aggregate_paper_baselines.py` | merge held-out eval JSON into main / appendix tables |
+| `run_loss_study.py` | the Strong Baseline objective sweep (`configs/experiments/loss_study_9.yaml`) |
+| `aggregate_loss_study.py` | merge held-out eval JSON into one table |
+| `make_paper_figures.py` | redraw the manuscript figures |
+| `benchmark_backbones.py` | parameter count, MACs, and latency |
+| `build_heldout_eval_notebook.py` | rebuild the Kaggle held-out evaluation notebook |
 | `eval_all_checkpoints.py` | batch-eval checkpoints from a JSON manifest |
 | `prepare_occluded_duke.py` | build Occluded-Duke layout from a licensed DukeMTMC-reID zip |
 
@@ -22,6 +24,5 @@ Typical flow:
 ```bash
 python scripts/prepare_datasets.py --pool configs/datasets/pool_v2.yaml --materialize copy --skip-missing
 python scripts/train.py --config-file configs/kaggle/primary_sbs_r50_poolv2.yml --num-gpus 2 --resume
-python scripts/evaluate.py --checkpoint outputs/sbs_r50ibn_msmt_v1/model_best.pth --sets all
-python scripts/export_weights.py --run outputs/sbs_r50ibn_msmt_v1 --key reidfm_sbs_r50_ibn_v1 --register
+python scripts/evaluate.py --checkpoint outputs/<run>/model_best.pth --sets test
 ```

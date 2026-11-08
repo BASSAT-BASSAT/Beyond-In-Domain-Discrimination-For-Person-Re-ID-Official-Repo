@@ -1,8 +1,9 @@
-"""Clone OSNet/ConvNeXt R0 production notebooks into ArcFace (B2) variants.
+"""Clone the OSNet and ConvNeXt-S Circle-softmax notebooks into ArcFace variants.
 
-Requires the research commit that contains OSNet_B2 / ConvNeXtS_B2 in
+Requires the research commit that contains the ArcFace backbone conditions in
 ``configs/experiments/backbone_study.yaml``. Pass ``--research-commit`` after
-pushing, or omit to use the current ``HEAD``.
+pushing, or omit to use the current ``HEAD``. Checkpoint keys inside the
+notebooks stay as stored in the bucket.
 """
 
 from __future__ import annotations
@@ -16,9 +17,24 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROD = ROOT / "notebooks/reid_loss_study_50epoch_production"
 
+# folder, notebook stem, checkpoint key
 PAIRS = (
-    ("OSNet_R0", "OSNet_B2"),
-    ("ConvNeXtS_R0", "ConvNeXtS_B2"),
+    (
+        "osnet-circle-softmax-triplet",
+        "osnet-arcface",
+        "OSNet_CircleSoftmax_Triplet",
+        "OSNet_ArcFace",
+        "OSNet_R0",
+        "OSNet_B2",
+    ),
+    (
+        "convnext-s-circle-softmax-triplet",
+        "convnext-s-arcface",
+        "ConvNeXtS_CircleSoftmax_Triplet",
+        "ConvNeXtS_ArcFace",
+        "ConvNeXtS_R0",
+        "ConvNeXtS_B2",
+    ),
 )
 
 
@@ -36,10 +52,21 @@ def _set_cell_text(cell: dict, text: str) -> None:
             cell["source"][-1] = cell["source"][-1].rstrip("\n")
 
 
-def _transform(text: str, *, src_cond: str, dst_cond: str, commit: str, bucket: str) -> str:
+def _transform(
+    text: str,
+    *,
+    src_cond: str,
+    dst_cond: str,
+    src_title: str,
+    dst_title: str,
+    commit: str,
+    bucket: str,
+) -> str:
     out = text
     out = out.replace(src_cond, dst_cond)
-    out = out.replace("Circle-softmax + Triplet", "ArcFace CE (SBS selected candidate B2)")
+    out = out.replace(src_title, dst_title)
+    out = out.replace("Circle-softmax + triplet", "ArcFace")
+    out = out.replace("Circle-softmax + Triplet", "ArcFace")
     out = out.replace("v3_50epoch_b69c47a", bucket)
     out = out.replace(
         "reid_loss_study_50epoch_b69c47a",
@@ -69,12 +96,12 @@ def _transform(text: str, *, src_cond: str, dst_cond: str, commit: str, bucket: 
 def generate(research_commit: str) -> list[Path]:
     bucket = f"v3_50epoch_{research_commit[:7]}"
     written: list[Path] = []
-    for src_cond, dst_cond in PAIRS:
-        dst_dir = PROD / dst_cond
+    for src_dir, dst_dir_name, src_stem, dst_stem, src_cond, dst_cond in PAIRS:
+        dst_dir = PROD / dst_dir_name
         dst_dir.mkdir(parents=True, exist_ok=True)
         for seed in (0, 1, 2):
-            src_path = PROD / src_cond / f"ReID_{src_cond}_Seed{seed}_50Epoch_Production.ipynb"
-            dst_path = dst_dir / f"ReID_{dst_cond}_Seed{seed}_50Epoch_Production.ipynb"
+            src_path = PROD / src_dir / f"{src_stem}_Seed{seed}.ipynb"
+            dst_path = dst_dir / f"{dst_stem}_Seed{seed}.ipynb"
             nb = json.loads(src_path.read_text(encoding="utf-8"))
             for cell in nb["cells"]:
                 text = _cell_text(cell)
@@ -84,6 +111,8 @@ def generate(research_commit: str) -> list[Path]:
                     text,
                     src_cond=src_cond,
                     dst_cond=dst_cond,
+                    src_title="Circle-softmax + triplet",
+                    dst_title="ArcFace",
                     commit=research_commit,
                     bucket=bucket,
                 )

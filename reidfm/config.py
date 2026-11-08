@@ -59,7 +59,7 @@ def add_reidfm_config(cfg) -> None:
     cfg.REIDFM.TRAIN_SPLIT = "splits/pool_v2_train_ids.json"
     # Folder with manifest.csv for in-training val when pool val_sets is empty.
     cfg.REIDFM.VAL_MANIFEST = "pool/poolv2val"
-    # Loss study / fair-baseline protocol (see docs/PAPER_PROTOCOL.md).
+    # Loss-study protocol. Checkpoints are chosen on the source identity holdout.
     cfg.REIDFM.STUDY_MODE = False
     cfg.REIDFM.STRICT_SPLIT = False
     cfg.REIDFM.LOSS_STUDY_CONDITION = ""

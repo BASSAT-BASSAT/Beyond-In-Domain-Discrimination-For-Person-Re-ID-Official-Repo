@@ -1,0 +1,113 @@
+{
+  "models": {
+    "SBS R50-IBN": {
+      "condition": "R0",
+      "input": [
+        384,
+        128
+      ],
+      "params_total_M": 44.094544,
+      "params_deployed_M": 23.540816,
+      "gmacs": 6.087991296,
+      "gpu_latency_ms_fp32_b1": 8.900399960111827,
+      "gpu_latency_ms_fp32_b1_range": [
+        7.13379995431751,
+        8.986749919131398
+      ],
+      "gpu_latency_ms_fp16_b1": 11.005699983797967,
+      "gpu_throughput_img_s_fp16": 1001.5727821893978,
+      "gpu_throughput_img_s_fp16_range": [
+        994.9189171112263,
+        1008.6285020031119
+      ],
+      "gpu_batch": 64,
+      "cpu_latency_ms_fp32_b1": 28.6147499573417,
+      "cpu_latency_ms_fp32_b1_range": [
+        26.878299948293716,
+        30.53160000126809
+      ],
+      "cpu_throughput_img_s_fp32": 31.07785780401293,
+      "cpu_throughput_img_s_fp32_range": [
+        26.532577651672742,
+        40.02463766783094
+      ],
+      "cpu_batch": 32
+    },
+    "OSNet": {
+      "condition": "OSNet_R0",
+      "input": [
+        384,
+        128
+      ],
+      "params_total_M": 7.045285,
+      "params_deployed_M": 1.906853,
+      "gmacs": 1.467905024,
+      "gpu_latency_ms_fp32_b1": 12.665450049098581,
+      "gpu_latency_ms_fp32_b1_range": [
+        12.409850023686886,
+        13.037699973210692
+      ],
+      "gpu_latency_ms_fp16_b1": 16.959600034169853,
+      "gpu_throughput_img_s_fp16": 1461.9114932109494,
+      "gpu_throughput_img_s_fp16_range": [
+        1359.0014743891477,
+        1465.9314081028886
+      ],
+      "gpu_batch": 64,
+      "cpu_latency_ms_fp32_b1": 24.832700029946864,
+      "cpu_latency_ms_fp32_b1_range": [
+        24.108350044116378,
+        24.895850045140833
+      ],
+      "cpu_throughput_img_s_fp32": 69.13709345507819,
+      "cpu_throughput_img_s_fp32_range": [
+        61.30288163958546,
+        76.8591231146783
+      ],
+      "cpu_batch": 32
+    },
+    "ConvNeXt-S": {
+      "condition": "ConvNeXtS_R0",
+      "input": [
+        384,
+        128
+      ],
+      "params_total_M": 57.162337,
+      "params_deployed_M": 49.454689,
+      "gmacs": 10.251401472,
+      "gpu_latency_ms_fp32_b1": 10.97785000456497,
+      "gpu_latency_ms_fp32_b1_range": [
+        10.972250020131469,
+        11.019899975508451
+      ],
+      "gpu_latency_ms_fp16_b1": 11.736399959772825,
+      "gpu_throughput_img_s_fp16": 656.7467124007458,
+      "gpu_throughput_img_s_fp16_range": [
+        626.5501611779968,
+        681.9407180175076
+      ],
+      "gpu_batch": 64,
+      "cpu_latency_ms_fp32_b1": 35.11475003324449,
+      "cpu_latency_ms_fp32_b1_range": [
+        34.32815003907308,
+        38.812599959783256
+      ],
+      "cpu_throughput_img_s_fp32": 19.57034829205502,
+      "cpu_throughput_img_s_fp32_range": [
+        13.648447262086181,
+        25.99186584595967
+      ],
+      "cpu_batch": 32
+    }
+  },
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 5070 Laptop GPU",
+    "cpu": "Intel(R) Core(TM) Ultra 9 275HX",
+    "cpu_threads": 24,
+    "torch": "2.12.0.dev20260408+cu128",
+    "cuda": "12.8",
+    "cudnn": 92000,
+    "python": "3.11.15",
+    "os": "Windows-10-10.0.26200-SP0"
+  }
+}
