@@ -6,7 +6,7 @@ Does the training loss change how well a person re-identification model survives
 
 The same ArcFace settings do not transfer unchanged. They raise ConvNeXt-S by 2.6 mAP and lower OSNet by 1.6 mAP. OSNet with the default loss remains the best accuracy per parameter: 43.6% mAP from 1.9M deployed weights.
 
-The manuscript is [`paper_draft.tex`](paper_draft.tex) ([PDF](paper_draft.pdf)). A short overview is at [the project page](https://bassat-bassat.github.io/Beyond-In-Domain-Discrimination-For-Person-Re-ID-Official-Repo/). Trained weights will be released at [reid-research-hub](https://huggingface.co/reid-research-hub). The first public checkpoints will be the two models worth deploying: Strong Baseline + ArcFace, and OSNet + Circle-softmax + triplet. Not uploaded yet.
+The paper will be available here after it is published. The DOI will be added then. A short overview is at [the project page](https://bassat-bassat.github.io/Beyond-In-Domain-Discrimination-For-Person-Re-ID-Official-Repo/). Trained weights will be released at [reid-research-hub](https://huggingface.co/reid-research-hub). The first public checkpoints will be the two models worth deploying: Strong Baseline + ArcFace, and OSNet + Circle-softmax + triplet. Not uploaded yet.
 
 ## Result
 
