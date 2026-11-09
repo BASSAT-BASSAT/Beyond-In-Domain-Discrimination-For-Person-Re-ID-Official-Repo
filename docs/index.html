@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Identity-learning objectives for cross-domain person re-identification</title>
+  <meta name="description" content="A study of identity-learning losses for cross-domain person re-identification. ArcFace on the Strong Baseline reaches 44.8% mAP and 61.9% Rank-1.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,560&family=Public+Sans:wght@420;560&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #e6e9ee;
+      --ink: #14181f;
+      --muted: #4e5968;
+      --line: #c5ccd6;
+      --blue: #1d4e89;
+      --rust: #8c3b2a;
+      --card: #f7f8fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Public Sans", "Segoe UI", sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+    }
+    a { color: var(--blue); }
+    a:hover { color: var(--rust); }
+    header, main, footer { width: min(880px, calc(100% - 2.5rem)); margin-inline: auto; }
+    header { padding: 3.2rem 0 1.4rem; border-bottom: 1px solid var(--line); }
+    h1 {
+      margin: 0;
+      font-family: Newsreader, Georgia, serif;
+      font-weight: 560;
+      font-size: clamp(2.1rem, 5vw, 3.3rem);
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+    }
+    .lead { max-width: 40rem; color: var(--muted); margin: 1rem 0 0; }
+    nav { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.5rem; }
+    nav a {
+      text-decoration: none;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      padding: 0.45rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.92rem;
+    }
+    nav a:hover { border-color: var(--blue); color: var(--blue); }
+    main { padding: 2rem 0 3rem; }
+    h2 {
+      font-family: Newsreader, Georgia, serif;
+      font-weight: 560;
+      font-size: 1.7rem;
+      margin: 2.4rem 0 0.6rem;
+    }
+    .result {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 1.2rem 1.6rem;
+      align-items: end;
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 1.2rem 1.3rem;
+      margin-top: 1.6rem;
+    }
+    .result strong {
+      font-family: Newsreader, Georgia, serif;
+      font-size: clamp(2.4rem, 6vw, 3.4rem);
+      font-weight: 560;
+      line-height: 0.95;
+      color: var(--blue);
+    }
+    .result p { margin: 0; }
+    .result span { display: block; color: var(--muted); font-size: 0.92rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; margin: 0.8rem 0 0.4rem; }
+    th, td { text-align: left; padding: 0.45rem 0.3rem; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 560; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    td:nth-child(n+3), th:nth-child(n+3) { text-align: right; }
+    tr.best td { color: var(--blue); font-weight: 560; }
+    figure { margin: 1.4rem 0 0; }
+    img { width: 100%; height: auto; background: white; border: 1px solid var(--line); }
+    figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 0.45rem; }
+    footer { border-top: 1px solid var(--line); padding: 1.2rem 0 2.4rem; color: var(--muted); font-size: 0.9rem; }
+    @media (max-width: 640px) {
+      .result { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Identity-learning objectives for cross-domain person re-identification</h1>
+    <p class="lead">Nine public sources. Four benchmarks the model never saw. The question is whether the training loss changes who the embedding still recognizes.</p>
+    <nav>
+      <a href="https://github.com/BASSAT-BASSAT/Person-Re-ID-Foundational-model/blob/main/paper_draft.pdf">Paper (PDF)</a>
+      <a href="https://github.com/BASSAT-BASSAT/Person-Re-ID-Foundational-model/blob/main/paper_draft.tex">LaTeX source</a>
+      <a href="https://github.com/BASSAT-BASSAT/Person-Re-ID-Foundational-model">Repository</a>
+      <a href="https://huggingface.co/reid-research-hub">Weights, soon</a>
+    </nav>
+  </header>
+  <main>
+    <section class="result">
+      <strong>44.8<span style="font-size:0.45em">%</span></strong>
+      <p>mAP, and 61.9% Rank-1, for ArcFace without triplet loss on the FastReID Strong Baseline. That is +4.2 mAP over Circle-softmax plus triplet on the same backbone. The classifier is thrown away at retrieval, so the gain costs nothing at inference.<span>Mean ± standard deviation over three seeds. Unweighted average of Market-1501, MSMT17, DukeMTMC-reID, and Occluded-Duke.</span></p>
+    </section>
+
+    <h2>The loss is not interchangeable</h2>
+    <p>The same ArcFace settings raise ConvNeXt-S by 2.6 mAP and lower OSNet by 1.6. OSNet with the default loss is still the best accuracy per parameter: 43.6% mAP from 1.9 million deployed weights.</p>
+    <table>
+      <thead>
+        <tr><th>Backbone</th><th>Objective</th><th>mAP</th><th>Rank-1</th></tr>
+      </thead>
+      <tbody>
+        <tr class="best"><td>Strong Baseline</td><td>ArcFace</td><td>44.8 ± 0.3</td><td>61.9 ± 0.1</td></tr>
+        <tr><td>OSNet</td><td>Circle-softmax + triplet</td><td>43.6 ± 0.2</td><td>60.8 ± 0.4</td></tr>
+        <tr><td>OSNet</td><td>ArcFace</td><td>42.0 ± 0.1</td><td>61.0 ± 0.2</td></tr>
+        <tr><td>Strong Baseline</td><td>Circle-softmax + triplet</td><td>40.6 ± 0.8</td><td>57.9 ± 0.6</td></tr>
+        <tr><td>ConvNeXt-S</td><td>ArcFace</td><td>40.0 ± 0.3</td><td>57.3 ± 0.5</td></tr>
+      </tbody>
+    </table>
+
+    <h2>What the curves show</h2>
+    <figure>
+      <img src="https://raw.githubusercontent.com/BASSAT-BASSAT/Person-Re-ID-Foundational-model/main/figures/cmc_sbs.png" alt="CMC curves comparing ArcFace and Circle-softmax plus triplet on the Strong Baseline">
+      <figcaption>Strong Baseline. ArcFace against the FastReID default, ranks 1–20. The band is the standard deviation over three seeds.</figcaption>
+    </figure>
+    <figure>
+      <img src="https://raw.githubusercontent.com/BASSAT-BASSAT/Person-Re-ID-Foundational-model/main/figures/triplet_effect.png" alt="Bar chart of the change in accuracy when triplet loss is added">
+      <figcaption>Triplet loss helps Sub-center ArcFace and SphereFace2. It hurts ArcFace and linear softmax.</figcaption>
+    </figure>
+    <figure>
+      <img src="https://raw.githubusercontent.com/BASSAT-BASSAT/Person-Re-ID-Foundational-model/main/figures/accuracy_cost.png" alt="Scatter plot of accuracy against deployed model size">
+      <figcaption>Circles are Circle-softmax plus triplet. Squares are ArcFace. Marker area is the number of deployed parameters.</figcaption>
+    </figure>
+  </main>
+  <footer>
+    Training used 782,064 images and 10,036 identities. Checkpoints were chosen on held-out identities from those sources, never on the four public benchmarks. The first public weights will be Strong Baseline with ArcFace, and OSNet with Circle-softmax plus triplet, at <a href="https://huggingface.co/reid-research-hub">reid-research-hub</a>.
+  </footer>
+</body>
+</html>
