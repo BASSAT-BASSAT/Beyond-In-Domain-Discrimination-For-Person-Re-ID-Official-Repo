@@ -18,8 +18,7 @@ DATA = ROOT / "reports/paper_figs"
 FIGS = ROOT / "figures"
 DATASETS = ("market1501", "msmt17", "dukemtmc", "occludedduke")
 TITLES = {"market1501": "Market-1501", "msmt17": "MSMT17", "dukemtmc": "DukeMTMC-reID", "occludedduke": "Occluded-Duke"}
-# B4 seed 2 diverged (macro Rank-1 < 2%) and is excluded from all aggregates.
-EXCLUDED = {"B4_seed2"}
+EXCLUDED = set()
 
 plt.rcParams.update({
     "font.family": "serif",

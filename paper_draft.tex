@@ -1,9 +1,10 @@
-\documentclass[runningheads]{llncs}
+\documentclass{llncs}
 
 \usepackage[T1]{fontenc}
 \usepackage{newtxtext}
 \usepackage[varvw]{newtxmath}
 \usepackage{booktabs}
+\usepackage{graphicx}
 \usepackage{orcidlink}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta,calc}
@@ -29,14 +30,14 @@ Mahmoud Gamal\inst{1}}
 
 \authorrunning{A. Labib et al.}
 
-\institute{Faculty of Computers and Data Science, Alexandria University, Alexandria, Egypt\\
+\institute{Department of Computing and Information Systems, Faculty of Computers and Data Science, Alexandria University, Alexandria, Egypt\\
 \textsuperscript{*} Correspondence: \email{cds.AhmedMahmoud24052@alexu.edu.eg} (A. Labib); \email{cds.MohamedMohamed24510@alexu.edu.eg} (M. ElBassat).\\
 \textsuperscript{\ensuremath{\dagger}} These authors contributed equally.}
 
 \maketitle
 
 \begin{abstract}
-We study how identity-learning objectives affect cross-domain person re-identification under heterogeneous multi-source training. Using the FastReID Strong Baseline with ResNet-50-IBN, we compare four identity heads with and without triplet loss across three seeds and four unseen public benchmarks. ArcFace without triplet achieves the highest average (44.8\% mAP, 61.9\% Rank-1), exceeding its triplet variant and the FastReID default (40.6\%, 57.9\%); its largest mAP gain over the default is on MSMT17 (+8.0 points). Triplet loss improves Sub-center ArcFace and SphereFace2, but reduces results for linear softmax and ArcFace. Across architectures, ArcFace raises average mAP by 2.6 points on ConvNeXt-S and lowers it by 1.6 on OSNet. The Strong Baseline with ArcFace is the best-scoring configuration, while OSNet with the default remains a compact, competitive option. Because the identity classifier is discarded at retrieval, changing objectives adds no inference cost within a backbone.
+We study how identity-learning objectives affect cross-domain person re-identification under heterogeneous multi-source training. Using the FastReID Strong Baseline with ResNet-50-IBN, we compare four identity heads with and without triplet loss across three seeds and four unseen public benchmarks. ArcFace without triplet achieves the highest average (44.8\% mAP, 61.9\% Rank-1), exceeding its triplet variant and the FastReID default (40.6\%, 57.9\%); its largest mAP gain over the default is on MSMT17 (+8.0 points). Triplet loss improves Sub-center ArcFace and SphereFace2, but reduces results for linear softmax and ArcFace. Across architectures, ArcFace raises average mAP by 2.6 points on ConvNeXt-S and lowers it by 1.6 on OSNet. The Strong Baseline with ArcFace is the best-scoring configuration, while OSNet with the default remains a compact, competitive option. Because the identity classifier is discarded at retrieval, changing objectives adds no inference cost within a backbone. Code is available in the \href{https://github.com/BASSAT-BASSAT/Beyond-In-Domain-Discrimination-For-Person-Re-ID-Official-Repo}{project repository}.
 \end{abstract}
 
 \keywords{Person re-identification \and Identity-learning objectives \and Domain generalization \and Multi-source training \and Angular-margin losses}
@@ -82,31 +83,18 @@ Convolutional architectures remain an established foundation for practical perso
 We use nine heterogeneous source datasets for training and internal validation, and reserve four public benchmarks for unseen-domain evaluation. The overall experimental pipeline is illustrated in Fig.~\ref{fig:framework}.
 
 \begin{figure}[t]
-\centering
-\begin{tikzpicture}[
-    font=\scriptsize,
-    box/.style={draw, rounded corners=2pt, align=center, minimum height=1.7cm, text width=2.4cm, inner sep=3pt},
-    data/.style={box, fill=gray!10},
-    stage/.style={box, fill=blue!6},
-    wide/.style={draw, rounded corners=2pt, align=center, inner sep=3pt, minimum height=0.95cm, text width=4.9cm},
-    arr/.style={-{Stealth[length=4pt]}, thick},
-    node distance=0.38cm]
-\node[data] (src) {\textbf{Multi-source data}\\[2pt] 9 datasets\\ 782k images\\ 10{,}036 identities};
-\node[data, right=of src] (harm) {\textbf{Harmonization}\\[2pt] global identity space,\\ train/val identity split,\\ \mbox{domain-balanced} sampler};
-\node[stage, right=of harm] (sweep) {\textbf{Stage 1}\\[2pt] objective sweep on SBS R50-IBN: 4 heads $\times$ \{w/o, w/\} triplet $\times$ 3 seeds};
-\node[stage, right=of sweep] (bb) {\textbf{Stage 2}\\[2pt] best objective vs.\ \mbox{FastReID} default on SBS, OSNet, ConvNeXt-S};
-\node[wide, fill=green!8, below=0.55cm of $(src.south)!0.5!(harm.south)$] (val) {\textbf{Internal validation}\\ held-out source identities; checkpoint selection};
-\node[wide, fill=orange!10, below=0.55cm of $(sweep.south)!0.5!(bb.south)$] (eval) {\textbf{Unseen-domain evaluation}\\ Market-1501, MSMT17, DukeMTMC-reID, Occluded-Duke};
-\draw[arr] (src) -- (harm);
-\draw[arr] (harm) -- (sweep);
-\draw[arr] (sweep) -- (bb);
-\draw[arr] (harm.south) -- (harm.south |- val.north);
-\draw[arr] (sweep.south) -- (sweep.south |- eval.north);
-\draw[arr] (bb.south) -- (bb.south |- eval.north);
-\draw[arr, dashed] (val) -- (eval);
-\end{tikzpicture}
-\caption{Overview of the experimental framework. Nine harmonized sources are used for training and checkpoint selection; four public benchmarks are reserved exclusively for evaluation. Stage~1 compares eight objective configurations on a fixed architecture, and Stage~2 tests whether the best of them transfers to other backbones.}
-\label{fig:framework}
+    \centering
+    \includegraphics[width=\textwidth]{reid_pipeline.png}
+
+    \caption{Overview of the experimental framework.
+    Nine harmonized sources are used for training and
+    checkpoint selection; four public benchmarks are
+    reserved exclusively for evaluation.
+    Stage~1 compares eight objective configurations
+    on a fixed architecture, and Stage~2 tests whether
+    the best of them transfers to other backbones.}
+
+    \label{fig:framework}
 \end{figure}
 
 \subsection{Multi-Source Training Data}
@@ -355,7 +343,7 @@ Objective & Market & MSMT17 & Duke & Occ-Duke & Avg. \\
 \midrule
 Linear softmax & \mstd{58.7}{0.5} / \mstd{81.0}{0.6} & \mstd{16.2}{0.3} / \mstd{36.3}{0.5} & \mstd{48.8}{0.4} / \mstd{65.7}{0.7} & \mstd{21.0}{0.7} / \mstd{26.9}{0.6} & \mstd{36.2}{0.2} / \mstd{52.5}{0.2} \\
 ArcFace & \mstd{69.8}{0.3} / \mstd{87.8}{0.2} & \mstd{23.5}{0.4} / \mstd{49.3}{0.5} & \mstd{56.9}{0.5} / \mstd{73.4}{0.6} & \mstd{28.9}{0.5} / \mstd{37.1}{0.6} & \mstd{44.8}{0.3} / \mstd{61.9}{0.1} \\
-Sub-center ArcFace & \mstd{64.1}{0.2} / \mstd{85.6}{0.2} & \mstd{20.8}{0.3} / \mstd{45.6}{0.2} & \mstd{52.7}{0.2} / \mstd{69.7}{0.6} & \mstd{25.8}{0.1} / \mstd{33.9}{0.2} & \mstd{40.8}{0.1} / \mstd{58.7}{0.3} \\
+Sub-center ArcFace & \mstd{64.1}{0.2} / \mstd{85.6}{0.2} & \mstd{20.6}{0.3} / \mstd{45.4}{0.5} & \mstd{52.1}{1.0} / \mstd{69.3}{0.8} & \mstd{25.4}{0.6} / \mstd{33.7}{0.3} & \mstd{40.6}{0.5} / \mstd{58.5}{0.4} \\
 SphereFace2 & \mstd{60.3}{1.4} / \mstd{83.5}{0.4} & \mstd{16.7}{1.0} / \mstd{37.9}{1.2} & \mstd{43.6}{4.3} / \mstd{65.6}{2.5} & \mstd{21.0}{2.3} / \mstd{31.9}{2.2} & \mstd{35.4}{2.2} / \mstd{54.7}{1.4} \\
 \bottomrule
 \end{tabular*}
@@ -382,9 +370,9 @@ SphereFace2  & \mstd{62.2}{2.0} / \mstd{84.4}{0.9} & \mstd{16.3}{0.8} / \mstd{37
 
 ArcFace without triplet achieves the highest four-benchmark average of all eight candidates (44.8\% mAP and 61.9\% Rank-1), with low variation across seeds ($\pm$0.3 mAP and $\pm$0.1 Rank-1). Its margin is not driven by a single dataset: it is the best or within one standard deviation of the best configuration on every benchmark, and its advantage is largest on MSMT17, the largest and most heterogeneous target, where it reaches 23.5\% mAP and 49.3\% Rank-1. The ranking of heads is the same with and without triplet loss: ArcFace is followed by Sub-center ArcFace, while SphereFace2 and linear softmax trail by 8--10 points in average mAP.
 
-The two head families with an angular margin outperform the unnormalized linear softmax by a wide margin, which is consistent with the view that normalizing features and class centers produces an embedding geometry that ranks better under the cosine similarity used at retrieval time. Representing each identity with three sub-centers does not help on average, however. Sub-center ArcFace was designed to absorb label noise and intra-class multimodality, both of which are present in our pooled sources, yet it remains 4.0 points below single-center ArcFace in average mAP. One plausible explanation is that sub-centers fit source-specific appearance modes, such as different clothing or scenes of the same identity, that the retrieval embedding then fails to merge at test time.
+The two head families with an angular margin outperform the unnormalized linear softmax by a wide margin, which is consistent with the view that normalizing features and class centers produces an embedding geometry that ranks better under the cosine similarity used at retrieval time. Representing each identity with three sub-centers does not help on average, however. Sub-center ArcFace was designed to absorb label noise and intra-class multimodality, both of which are present in our pooled sources, yet it remains 4.2 points below single-center ArcFace in average mAP. One plausible explanation is that sub-centers fit source-specific appearance modes, such as different clothing or scenes of the same identity, that the retrieval embedding then fails to merge at test time.
 
-The effect of triplet supervision depends on the head. It lowers average mAP by 2.3 points for linear softmax and by 0.5 points for ArcFace, but raises it by 1.3 points for both Sub-center ArcFace and SphereFace2. It also reduces SphereFace2's seed variation from 2.2 to 0.7 mAP points. For ArcFace, the small average decline includes a larger drop on MSMT17 ($-1.5$ mAP and $-2.7$ Rank-1), while Market-1501 changes slightly in the opposite direction. Thus, triplet loss is not a uniformly beneficial addition; its effect depends on the identity head.
+The effect of triplet supervision depends on the head. It lowers average mAP by 2.3 points for linear softmax and by 0.5 points for ArcFace, but raises it by 1.5 points for Sub-center ArcFace and by 1.3 points for SphereFace2. It also reduces SphereFace2's seed variation from 2.2 to 0.7 mAP points. For ArcFace, the small average decline includes a larger drop on MSMT17 ($-1.5$ mAP and $-2.7$ Rank-1), while Market-1501 changes slightly in the opposite direction. Thus, triplet loss is not a uniformly beneficial addition; its effect depends on the identity head.
 
 Finally, all ArcFace and Sub-center ArcFace variants exceed the FastReID Circle-softmax-plus-triplet default on the same architecture (40.6\% mAP and 57.9\% Rank-1; Table~\ref{tab:backbone}). Since ArcFace with triplet and the default differ only in the classification head under our shared protocol, the 3.7-point gap between them can be attributed to the head itself.
 

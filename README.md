@@ -10,7 +10,7 @@ The manuscript is [`paper_draft.tex`](paper_draft.tex). Trained weights will be 
 
 ## Result
 
-Mean ± standard deviation over three seeds. The average is unweighted across the four benchmarks. One Sub-center ArcFace run (no triplet, seed 2) diverged and is excluded.
+Mean ± standard deviation over three seeds. The average is unweighted across the four benchmarks.
 
 ### Which loss, on the Strong Baseline
 
@@ -19,7 +19,7 @@ Mean ± standard deviation over three seeds. The average is unweighted across th
 | **ArcFace** | no | **44.8 ± 0.3** | **61.9 ± 0.1** |
 | ArcFace | yes | 44.3 ± 0.2 | 60.7 ± 0.1 |
 | Sub-center ArcFace (K=3) | yes | 42.1 ± 0.5 | 58.8 ± 0.7 |
-| Sub-center ArcFace (K=3) | no | 40.8 ± 0.1 | 58.7 ± 0.3 |
+| Sub-center ArcFace (K=3) | no | 40.6 ± 0.5 | 58.5 ± 0.4 |
 | Circle-softmax (FastReID default) | yes | 40.6 ± 0.8 | 57.9 ± 0.6 |
 | SphereFace2 | yes | 36.7 ± 0.7 | 55.9 ± 0.7 |
 | Linear softmax | no | 36.2 ± 0.2 | 52.5 ± 0.2 |

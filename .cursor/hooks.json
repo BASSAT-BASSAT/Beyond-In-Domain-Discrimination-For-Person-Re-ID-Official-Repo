@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "command": ".cursor\\skills\\impeccable\\scripts\\impeccable.cmd hook",
+        "matcher": "^Write$",
+        "timeout": 5
+      }
+    ]
+  }
+}
