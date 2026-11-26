@@ -19,12 +19,21 @@ LOSS_STUDY_CONDITIONS: tuple[str, ...] = (
 
 PRIMARY_INIT_MODEL = "sbs_r50_ibn_imagenet"
 
+# Camera-ready reviewer request: SBS ArcFace margin variants (B2 itself uses the base m=0.35).
+# Kept apart from LOSS_STUDY_CONDITIONS so the paper's nine-condition table and tooling are unchanged.
+SBS_MARGIN_CONDITIONS: tuple[str, ...] = ("B2_m025", "B2_m050")
+
 # Cross-backbone comparison: Circle-softmax + Triplet (R0) vs selected ArcFace (B2).
 BACKBONE_STUDY_CONDITIONS: tuple[str, ...] = (
     "OSNet_R0",
     "ConvNeXtS_R0",
     "OSNet_B2",
     "ConvNeXtS_B2",
+    # Camera-ready reviewer request: ArcFace margin tuned per backbone (default m=0.35 is *_B2).
+    "OSNet_B2_m025",
+    "OSNet_B2_m050",
+    "ConvNeXtS_B2_m025",
+    "ConvNeXtS_B2_m050",
 )
 
 IMAGENET_INIT_MODELS: FrozenSet[str] = frozenset(

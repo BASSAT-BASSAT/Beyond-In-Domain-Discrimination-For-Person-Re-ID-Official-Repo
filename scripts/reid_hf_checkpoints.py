@@ -15,13 +15,13 @@ import tempfile
 import time
 from pathlib import Path
 
-from reidfm.experiments.contract import BACKBONE_STUDY_CONDITIONS, LOSS_STUDY_CONDITIONS
+from reidfm.experiments.contract import BACKBONE_STUDY_CONDITIONS, LOSS_STUDY_CONDITIONS, SBS_MARGIN_CONDITIONS
 
 
 SCHEMA = 1
 VALID_NAMES = {"model_mid.pth", "model_last.pth", "model_final.pth"}
 
-ALLOWED_CHECKPOINT_CONDITIONS = frozenset((*LOSS_STUDY_CONDITIONS, *BACKBONE_STUDY_CONDITIONS))
+ALLOWED_CHECKPOINT_CONDITIONS = frozenset((*LOSS_STUDY_CONDITIONS, *BACKBONE_STUDY_CONDITIONS, *SBS_MARGIN_CONDITIONS))
 
 
 def digest(path: Path) -> str:

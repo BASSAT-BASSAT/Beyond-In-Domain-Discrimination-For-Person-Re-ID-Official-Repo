@@ -7,15 +7,28 @@ import json
 import pytest
 import torch
 
-from reidfm.experiments.contract import LOSS_STUDY_CONDITIONS, LOSS_STUDY_WHITELIST, PRIMARY_INIT_MODEL
+from reidfm.experiments.contract import (
+    LOSS_STUDY_CONDITIONS, LOSS_STUDY_WHITELIST, PRIMARY_INIT_MODEL, SBS_MARGIN_CONDITIONS,
+)
 from reidfm.experiments.loss_study import expand_loss_study_run, load_loss_study_manifest
 from reidfm.modeling.losses.sphereface2 import SphereFace2Loss, sphereface2_loss
 
 
 def test_manifest_has_nine_unique_conditions():
     manifest = load_loss_study_manifest()
-    assert set(manifest["conditions"]) == set(LOSS_STUDY_CONDITIONS)
+    assert set(manifest["conditions"]) == set(LOSS_STUDY_CONDITIONS) | set(SBS_MARGIN_CONDITIONS)
     assert manifest["init_model"] == PRIMARY_INIT_MODEL
+
+
+@pytest.mark.parametrize("cond, margin", [("B2_m025", "0.25"), ("B2_m050", "0.5")])
+def test_sbs_margin_conditions_differ_from_b2_only_in_margin(cond, margin):
+    b2 = expand_loss_study_run("B2", 0).opts
+    var = expand_loss_study_run(cond, 0).opts
+    pairs = lambda o: {o[i]: str(o[i + 1]) for i in range(0, len(o) - 1, 2)}
+    a, b = pairs(b2), pairs(var)
+    diff = {k for k in a.keys() | b.keys() if a.get(k) != b.get(k)}
+    assert diff == {"MODEL.HEADS.MARGIN", "REIDFM.LOSS_STUDY_CONDITION"}, diff
+    assert b["MODEL.HEADS.MARGIN"] == margin
 
 
 def test_expand_run_sets_study_flags():

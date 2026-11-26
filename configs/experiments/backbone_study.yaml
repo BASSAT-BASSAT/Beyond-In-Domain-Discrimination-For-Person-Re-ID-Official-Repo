@@ -59,3 +59,62 @@ conditions:
       MODEL.HEADS.NAME: EmbeddingHead
       MODEL.HEADS.CLS_LAYER: ArcSoftmax
       MODEL.LOSSES.NAME: [CrossEntropyLoss]
+
+  # Camera-ready reviewer request: per-backbone ArcFace margin (B2 uses the base m=0.35).
+  OSNet_B2_m025:
+    init_model: osnet_ain_imagenet
+    opts:
+      MODEL.BACKBONE.NAME: build_osnet_ain_backbone
+      MODEL.BACKBONE.FEAT_DIM: 512
+      MODEL.BACKBONE.WITH_IBN: "False"
+      MODEL.BACKBONE.WITH_NL: "False"
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: ArcSoftmax
+      MODEL.HEADS.MARGIN: 0.25
+      MODEL.LOSSES.NAME: [CrossEntropyLoss]
+
+  OSNet_B2_m050:
+    init_model: osnet_ain_imagenet
+    opts:
+      MODEL.BACKBONE.NAME: build_osnet_ain_backbone
+      MODEL.BACKBONE.FEAT_DIM: 512
+      MODEL.BACKBONE.WITH_IBN: "False"
+      MODEL.BACKBONE.WITH_NL: "False"
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: ArcSoftmax
+      MODEL.HEADS.MARGIN: 0.5
+      MODEL.LOSSES.NAME: [CrossEntropyLoss]
+
+  ConvNeXtS_B2_m025:
+    init_model: convnext_s_imagenet
+    opts:
+      MODEL.BACKBONE.NAME: build_convnext_backbone
+      MODEL.BACKBONE.DEPTH: small
+      MODEL.BACKBONE.FEAT_DIM: 768
+      MODEL.BACKBONE.LAST_STRIDE: 1
+      MODEL.BACKBONE.DROP_PATH_RATIO: 0.1
+      MODEL.BACKBONE.WITH_IBN: "False"
+      MODEL.BACKBONE.WITH_NL: "False"
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: ArcSoftmax
+      MODEL.HEADS.MARGIN: 0.25
+      MODEL.LOSSES.NAME: [CrossEntropyLoss]
+
+  ConvNeXtS_B2_m050:
+    init_model: convnext_s_imagenet
+    opts:
+      MODEL.BACKBONE.NAME: build_convnext_backbone
+      MODEL.BACKBONE.DEPTH: small
+      MODEL.BACKBONE.FEAT_DIM: 768
+      MODEL.BACKBONE.LAST_STRIDE: 1
+      MODEL.BACKBONE.DROP_PATH_RATIO: 0.1
+      MODEL.BACKBONE.WITH_IBN: "False"
+      MODEL.BACKBONE.WITH_NL: "False"
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: ArcSoftmax
+      MODEL.HEADS.MARGIN: 0.5
+      MODEL.LOSSES.NAME: [CrossEntropyLoss]

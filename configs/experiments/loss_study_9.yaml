@@ -71,3 +71,21 @@ conditions:
       MODEL.HEADS.NAME: AngularEmbeddingHead
       MODEL.HEADS.CLS_LAYER: Linear
       MODEL.LOSSES.NAME: [SphereFace2Loss, TripletLoss]
+
+  # Camera-ready reviewer request: ArcFace margin variants of B2 (B2 uses the base m=0.35).
+  # Not part of the nine-condition table; see contract.SBS_MARGIN_CONDITIONS.
+  B2_m025:
+    opts:
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: ArcSoftmax
+      MODEL.HEADS.MARGIN: 0.25
+      MODEL.LOSSES.NAME: [CrossEntropyLoss]
+
+  B2_m050:
+    opts:
+      MODEL.META_ARCHITECTURE: Baseline
+      MODEL.HEADS.NAME: EmbeddingHead
+      MODEL.HEADS.CLS_LAYER: ArcSoftmax
+      MODEL.HEADS.MARGIN: 0.5
+      MODEL.LOSSES.NAME: [CrossEntropyLoss]
