@@ -50,12 +50,38 @@ FETCH_IF_MISSING = (
 )
 
 
+TQDM_IMPORT = "from tqdm.std import tqdm\n"
+SAFE_WRITE = (
+    "from tqdm.std import tqdm\n"
+    "# Camera-ready fix: the hf-safe-backup thread uploads through huggingface_hub, which opens tqdm bars;\n"
+    "# tqdm's write iterating tqdm._instances at the same moment raised 'Set changed size during iteration'\n"
+    "# and killed this monitor. Disable hub progress bars and never let a console write crash the run.\n"
+    "os.environ[\"HF_HUB_DISABLE_PROGRESS_BARS\"] = \"1\"\n"
+    "try:\n"
+    "    from huggingface_hub.utils import disable_progress_bars as _hf_disable_bars\n"
+    "    _hf_disable_bars()\n"
+    "except Exception:\n"
+    "    pass\n\n"
+    "def _safe_write(message):\n"
+    "    for _ in range(3):\n"
+    "        try:\n"
+    "            tqdm.write(message)\n"
+    "            return\n"
+    "        except RuntimeError:\n"
+    "            time.sleep(0.05)\n"
+    "    print(message, flush=True)\n"
+)
+
+
 def transform(text: str, *, src_cond: str, dst_cond: str, src_commit: str, dst_commit: str, margin: float) -> str:
     out = text.replace(src_commit, dst_commit).replace(src_commit[:7], dst_commit[:7])
     # backbone notebooks name their clone folder after an older commit; keep it consistent
     out = out.replace("Person-Re-ID-Foundational-model-b69c47a", f"Person-Re-ID-Foundational-model-{dst_commit[:7]}")
     if CHECKOUT in out:
         out = out.replace(CHECKOUT, FETCH_IF_MISSING + CHECKOUT, 1)
+    if TQDM_IMPORT in out and "tqdm.write(" in out:
+        out = out.replace("tqdm.write(", "_safe_write(")
+        out = out.replace(TQDM_IMPORT, SAFE_WRITE, 1)
     out = re.sub(rf"(?<![\w]){re.escape(src_cond)}(?![\w])", dst_cond, out)
     if ANCHOR in out:
         out = out.replace(
@@ -101,6 +127,7 @@ def generate(commit: str) -> list[Path]:
                 assert anchors == 1, f"{folder} seed {seed}: expected one fingerprint anchor, found {anchors}"
                 body = json.dumps(nb, ensure_ascii=False)
                 assert body.count("cat-file") == 2, "fetch-if-missing guard not inserted"
+                assert "_safe_write(" in body and body.count("tqdm.write(") == 1, "tqdm race fix not applied"
                 assert src_commit not in body and src_commit[:7] not in body, "old commit left in notebook"
                 assert f"CONDITION = '{dst_cond}'" in body, "CONDITION not rewritten"
                 path = dst_dir / f"{out_stem}_{tag}_Seed{seed}.ipynb"
