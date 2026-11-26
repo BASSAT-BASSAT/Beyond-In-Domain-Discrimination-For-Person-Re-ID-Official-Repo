@@ -37,15 +37,31 @@ SOURCES = (
 MARGINS = (("m025", 0.25), ("m050", 0.5))
 SEEDS = (0, 1, 2)
 ANCHOR = "fingerprint = config_fingerprint(cfg)"
+CHECKOUT = 'checked([\n    "git", "-C", str(ROOT),\n    "checkout", "--quiet", "--detach", RESEARCH_COMMIT\n])'
+FETCH_IF_MISSING = (
+    "# Camera-ready: a clone made before the commit was pushed (same session, cell re-run) lacks it.\n"
+    "if subprocess.run([\"git\", \"-C\", str(ROOT), \"cat-file\", \"-e\", RESEARCH_COMMIT + \"^{commit}\"],\n"
+    "                  capture_output=True).returncode != 0:\n"
+    "    checked([\"git\", \"-C\", str(ROOT), \"fetch\", \"--quiet\", \"origin\",\n"
+    "             \"+refs/heads/*:refs/remotes/origin/*\"])\n"
+    "assert subprocess.run([\"git\", \"-C\", str(ROOT), \"cat-file\", \"-e\", RESEARCH_COMMIT + \"^{commit}\"],\n"
+    "                      capture_output=True).returncode == 0, (\n"
+    "    f\"Commit {RESEARCH_COMMIT} is not on GitHub yet: push branch camera-ready-margin-study first\")\n\n"
+)
 
 
 def transform(text: str, *, src_cond: str, dst_cond: str, src_commit: str, dst_commit: str, margin: float) -> str:
     out = text.replace(src_commit, dst_commit).replace(src_commit[:7], dst_commit[:7])
+    # backbone notebooks name their clone folder after an older commit; keep it consistent
+    out = out.replace("Person-Re-ID-Foundational-model-b69c47a", f"Person-Re-ID-Foundational-model-{dst_commit[:7]}")
+    if CHECKOUT in out:
+        out = out.replace(CHECKOUT, FETCH_IF_MISSING + CHECKOUT, 1)
     out = re.sub(rf"(?<![\w]){re.escape(src_cond)}(?![\w])", dst_cond, out)
     if ANCHOR in out:
         out = out.replace(
             ANCHOR,
-            f"assert abs(float(cfg.MODEL.HEADS.MARGIN) - {margin}) < 1e-9, cfg.MODEL.HEADS.MARGIN\n"
+            "_EXPECTED_MARGIN = {'m025': 0.25, 'm050': 0.5}[CONDITION.rsplit('_', 1)[-1]]  # from the top-cell CONDITION\n"
+            "assert abs(float(cfg.MODEL.HEADS.MARGIN) - _EXPECTED_MARGIN) < 1e-9, (CONDITION, cfg.MODEL.HEADS.MARGIN)\n"
             f"assert cfg.MODEL.HEADS.CLS_LAYER == 'ArcSoftmax', cfg.MODEL.HEADS.CLS_LAYER\n"
             f"print(f\"[PASS] ArcFace margin m={{cfg.MODEL.HEADS.MARGIN}} (camera-ready margin study)\")\n"
             + ANCHOR,
@@ -84,6 +100,7 @@ def generate(commit: str) -> list[Path]:
                     set_source(cell, new)
                 assert anchors == 1, f"{folder} seed {seed}: expected one fingerprint anchor, found {anchors}"
                 body = json.dumps(nb, ensure_ascii=False)
+                assert body.count("cat-file") == 2, "fetch-if-missing guard not inserted"
                 assert src_commit not in body and src_commit[:7] not in body, "old commit left in notebook"
                 assert f"CONDITION = '{dst_cond}'" in body, "CONDITION not rewritten"
                 path = dst_dir / f"{out_stem}_{tag}_Seed{seed}.ipynb"
