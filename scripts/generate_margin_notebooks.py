@@ -73,12 +73,69 @@ SAFE_WRITE = (
 )
 
 
+BUCKET_LINE = 'HF_BUCKET_ID = "reid-research-hub/reid-loss-study-live"\n'
+TOP_ANCHOR = "ENABLE_MID_EPOCH_CHECKPOINT = True\n"
+TOP_BUCKET_CONFIG = (
+    "ENABLE_MID_EPOCH_CHECKPOINT = True\n"
+    "# Checkpoint bucket. Keep the SAME bucket for every session of one CONDITION/SEED, otherwise\n"
+    "# the next session cannot find the previous checkpoint and restarts from step 0.\n"
+    "HF_BUCKET_ID = \"reid-research-hub/reid-loss-study-live\"\n"
+    "# \"public\": a public bucket is accepted (a new bucket is created public); an existing private one\n"
+    "#           also works and is left private. \"private\": refuse anything that is not private.\n"
+    "# Uploaded: model/optimizer checkpoints, JSON step pointers, training-loss metrics. No images,\n"
+    "# no manifests, no dataset paths, no tokens.\n"
+    "BUCKET_VISIBILITY = \"public\"\n"
+    "assert BUCKET_VISIBILITY in (\"public\", \"private\"), BUCKET_VISIBILITY\n"
+)
+OLD_ENSURE = (
+    '    def ensure_private_repository(self):\n'
+    '        """Retain the old call interface but ensure a private Bucket instead."""\n'
+    '        create_bucket(\n'
+    '            bucket_id=self.bucket_id, private=True,\n'
+    '            exist_ok=True, token=self.token,\n'
+    '        )\n'
+    '        info = bucket_info(self.bucket_id, token=self.token)\n'
+    '        if not info.private:\n'
+    '            raise RuntimeError("Refusing to save private ReID checkpoints to a public bucket")\n'
+    '        print("[PASS] Private HF Storage Bucket available (no Git history)")\n'
+)
+NEW_ENSURE = (
+    '    def ensure_private_repository(self):\n'
+    '        """Ensure the Bucket exists with the visibility chosen by BUCKET_VISIBILITY (top cell)."""\n'
+    '        want_private = BUCKET_VISIBILITY == "private"\n'
+    '        create_bucket(\n'
+    '            bucket_id=self.bucket_id, private=want_private,\n'
+    '            exist_ok=True, token=self.token,\n'
+    '        )\n'
+    '        info = bucket_info(self.bucket_id, token=self.token)\n'
+    '        is_private = bool(getattr(info, "private", False))\n'
+    '        if want_private and not is_private:\n'
+    '            raise RuntimeError(\n'
+    '                f"BUCKET_VISIBILITY=\'private\' but {self.bucket_id} is public; "\n'
+    '                "change BUCKET_VISIBILITY to \'public\' in the top cell to allow it"\n'
+    '            )\n'
+    '        kind = "private" if is_private else "PUBLIC"\n'
+    '        print(f"[PASS] {kind} HF Storage Bucket {self.bucket_id} available (no Git history)")\n'
+    '        if not is_private:\n'
+    '            print("[NOTE] Checkpoints and metrics in this bucket are publicly downloadable")\n'
+)
+
+
 def transform(text: str, *, src_cond: str, dst_cond: str, src_commit: str, dst_commit: str, margin: float) -> str:
     out = text.replace(src_commit, dst_commit).replace(src_commit[:7], dst_commit[:7])
     # backbone notebooks name their clone folder after an older commit; keep it consistent
     out = out.replace("Person-Re-ID-Foundational-model-b69c47a", f"Person-Re-ID-Foundational-model-{dst_commit[:7]}")
     if CHECKOUT in out:
         out = out.replace(CHECKOUT, FETCH_IF_MISSING + CHECKOUT, 1)
+    if TOP_ANCHOR in out and BUCKET_LINE in out:              # top config cell
+        out = out.replace(BUCKET_LINE, "", 1).replace(TOP_ANCHOR, TOP_BUCKET_CONFIG, 1)
+        out = out.replace("WRITE permission for the private HF organization Bucket",
+                          "WRITE permission for the HF Bucket in HF_BUCKET_ID")
+    if OLD_ENSURE in out:
+        out = out.replace(OLD_ENSURE, NEW_ENSURE, 1)
+    out = out.replace("**PRIVATE HF Storage Bucket** `reid-research-hub/reid-loss-study-live`",
+                      "**HF Storage Bucket** set by `HF_BUCKET_ID` / `BUCKET_VISIBILITY` in the top cell")
+    out = out.replace("model weights remain on the private HF Bucket", "model weights remain on the HF Bucket")
     if TQDM_IMPORT in out and "tqdm.write(" in out:
         out = out.replace("tqdm.write(", "_safe_write(")
         out = out.replace(TQDM_IMPORT, SAFE_WRITE, 1)
@@ -128,6 +185,9 @@ def generate(commit: str) -> list[Path]:
                 body = json.dumps(nb, ensure_ascii=False)
                 assert body.count("cat-file") == 2, "fetch-if-missing guard not inserted"
                 assert "_safe_write(" in body and body.count("tqdm.write(") == 1, "tqdm race fix not applied"
+                assert "Refusing to save private ReID checkpoints" not in body, "old private-only check left"
+                assert body.count("BUCKET_VISIBILITY = ") == 1 and body.count("HF_BUCKET_ID = ") == 1, "bucket config"
+                assert "PRIVATE HF Storage Bucket" not in body and "private HF Bucket" not in body, "stale private wording"
                 assert src_commit not in body and src_commit[:7] not in body, "old commit left in notebook"
                 assert f"CONDITION = '{dst_cond}'" in body, "CONDITION not rewritten"
                 path = dst_dir / f"{out_stem}_{tag}_Seed{seed}.ipynb"
